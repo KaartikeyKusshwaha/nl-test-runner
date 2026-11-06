@@ -37,6 +37,7 @@ The official demo page lists customer, admin, agent, and supplier logins, but th
 |---|---|
 | `ruff check .` | Pass |
 | `pytest -m "not live" -q` | 49 passed, 1 live test deselected |
+| `scripts/verify-clean-clone.ps1` | Pass; temporary clone created an isolated venv, installed the package, linted, ran all 49 offline tests, and displayed CLI help |
 | Local FakeLLM browser CLI | Pass; JSON/HTML, trace, and screenshots verified; secret absent from captured outputs |
 | `nlqa doctor` | Chromium launches; external LLM check not configured, so command exits nonzero |
 | PHPTravels + other-site live selfcheck | Not run; no Task 2 API key or PHPTravels credentials |
@@ -59,4 +60,4 @@ The official demo page lists customer, admin, agent, and supplier logins, but th
 ## Open items
 
 - Run at least three PHPTravels and two other-site cases with a Task 2 model key and generated PHPTravels demo credentials; report outcomes/flakiness in the evidence table.
-- Run the clean-clone script and inspect GitHub Actions after the repositories are pushed.
+- Inspect GitHub Actions after the repositories are pushed.
