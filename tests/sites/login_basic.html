@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Account sign in</title></head>
+  <body>
+    <main>
+      <h1>Sign in</h1>
+      <label for="user">Username</label><input id="user" autocomplete="username">
+      <label for="pass">Password</label><input id="pass" type="password" autocomplete="current-password">
+      <button id="login">Log in</button>
+      <section id="dashboard" hidden><h1>Customer dashboard</h1><p>Welcome back, customer.</p></section>
+      <div role="alert" id="message" aria-live="polite"></div>
+    </main>
+    <script>
+      document.querySelector('#login').addEventListener('click', () => {
+        const user = document.querySelector('#user').value;
+        const pass = document.querySelector('#pass').value;
+        if (user === 'customer' && pass === 'correct-horse') {
+          document.querySelector('#dashboard').hidden = false;
+          document.querySelector('#message').textContent = 'Signed in successfully';
+        } else document.querySelector('#message').textContent = 'Invalid username or password';
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Simple shop</title></head>
+  <body>
+    <h1>Available items</h1>
+    <article><h2>Notebook</h2><button id="add">Add item</button></article>
+    <p>Cart: <span id="count">0</span></p>
+    <div id="host"></div>
+    <iframe title="Cart status" srcdoc="&lt;h2&gt;Cart details&lt;/h2&gt;&lt;p&gt;Ready&lt;/p&gt;"></iframe>
+    <script>
+      const shadow = document.querySelector('#host').attachShadow({mode:'open'});
+      shadow.innerHTML = '<button id="shadow-info" aria-label="Show shop information">Shop information</button>';
+      document.querySelector('#add').addEventListener('click', () => {
+        document.querySelector('#count').textContent = String(Number(document.querySelector('#count').textContent) + 1);
+      });
+    </script>
+  </body>
+</html>
