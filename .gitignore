@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Secrets and generated run artifacts
+.env
+reports/
+*.trace.zip
+*.log
+
+# IDE and operating system
+.DS_Store
+.idea/
+.vscode/
