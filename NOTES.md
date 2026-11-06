@@ -7,9 +7,10 @@
 - Created an isolated `.venv` and installed the declared Task 2 dependencies; the environment is ignored by Git.
 - Playwright 1.64.1 and its managed Chromium are installed; local browser integration tests run offline.
 - Milestone C-M0 evidence: `nlqa --help` exits successfully; `ruff check .` reports `All checks passed!`.
-- Milestones C-M1–C-M6: `python -m pytest -q` passes all 33 offline tests; `ruff check .` passes.
+- Milestones C-M1–C-M7: `python -m pytest -q` passes all 43 offline tests; `ruff check .` passes.
 - C-M5 verdict tests cover the finish rules; the judge can only downgrade a candidate PASS.
 - C-M6 extraction tests cover explicit URLs, implicit expectations, malformed output, and generic cases. Page-controlled content is HTML-escaped inside the untrusted prompt boundary.
+- C-M7 FakeLLM tests cover pass/fail evidence, premature pass rejection, one repair, secret placeholder allowlisting, and bounded stop conditions.
 - `nlqa doctor` confirms the browser install; no model is configured yet, so live LLM runs remain pending.
 
 ## Decisions

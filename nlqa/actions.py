@@ -93,7 +93,7 @@ class BrowserController:
             self._validate_navigation(url)
             self.page.goto(url, wait_until="domcontentloaded", timeout=self.timeout_ms)
             self._bounded_load_wait()
-            return ActionResult(True, f"navigated to {self.page.url}", self.page.url)
+            return ActionResult(True, "navigated to the requested URL", self.page.url)
         if name == "click":
             _, locator = self.resolve_ref(str(args["ref"]), observation)
             target = (locator.get_attribute("target") or "").casefold()

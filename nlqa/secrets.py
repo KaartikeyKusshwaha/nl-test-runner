@@ -41,11 +41,13 @@ class SecretStore:
         }
         return cls(normalized, sensitive)
 
-    def substitute(self, value: str) -> str:
+    def substitute(self, value: str, *, allowed_names: set[str] | None = None) -> str:
         """Replace placeholders with configured values or fail with the missing name."""
 
         def replace(match: re.Match[str]) -> str:
             name = match.group(1)
+            if allowed_names is not None and name not in allowed_names:
+                raise ValueError(f"placeholder {name} is not present in the test case")
             if name not in self.values:
                 raise ValueError(f"env var {name} is not set")
             self.sensitive_values.add(self.values[name])
@@ -53,13 +55,15 @@ class SecretStore:
 
         return PLACEHOLDER.sub(replace, value)
 
-    def substitute_args(self, args: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    def substitute_args(
+        self, args: dict[str, Any], *, allowed_names: set[str] | None = None
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Return execution args and separately masked args for traces/reports."""
         actual: dict[str, Any] = {}
         safe: dict[str, Any] = {}
         for key, value in args.items():
             if isinstance(value, str):
-                actual[key] = self.substitute(value)
+                actual[key] = self.substitute(value, allowed_names=allowed_names)
                 safe[key] = self.mask(value)
             else:
                 actual[key] = value
