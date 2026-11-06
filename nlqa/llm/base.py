@@ -41,6 +41,8 @@ class LLMClient(Protocol):
     model: str
     usage: Usage
 
+    def ping(self) -> None: ...
+
     def choose_tool(
         self, *, system: str, user: str, tools: list[dict[str, Any]]
     ) -> ToolCall | None: ...

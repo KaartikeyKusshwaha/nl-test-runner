@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Browser test — {{ result.outcome }}</title>
+  <style>
+    :root { color-scheme: light; font: 15px/1.5 system-ui, sans-serif; color: #1f2937; background: #f4f6fb; }
+    body { margin: 0 auto; max-width: 1100px; padding: 32px 20px; }
+    header, section { background: #fff; border: 1px solid #dbe1ec; border-radius: 12px; padding: 20px; margin-bottom: 18px; }
+    h1, h2 { margin: 0 0 12px; } h1 { font-size: 25px; }
+    .badge { display: inline-block; border-radius: 20px; padding: 3px 12px; font-weight: 700; }
+    .PASS { color: #166534; background: #dcfce7; } .FAIL { color: #991b1b; background: #fee2e2; } .ERROR { color: #92400e; background: #fef3c7; }
+    .muted { color: #64748b; } table { width: 100%; border-collapse: collapse; } th, td { text-align: left; border-bottom: 1px solid #e5e7eb; padding: 9px 7px; vertical-align: top; }
+    code, pre { font-family: ui-monospace, Consolas, monospace; } pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f8fafc; padding: 10px; border-radius: 8px; }
+    img { display: block; max-width: min(100%, 900px); border: 1px solid #dbe1ec; border-radius: 8px; margin: 8px 0 18px; }
+    .status { font-weight: 700; } .status-proven { color: #166534; } .status-failed { color: #991b1b; } .status-unproven { color: #92400e; }
+  </style>
+</head>
+<body>
+  <header>
+    <p><span class="badge {{ result.outcome }}">{{ result.outcome }}</span></p>
+    <h1>{{ result.spec.goal }}</h1>
+    <p>{{ result.reason }}</p>
+    <p class="muted">{{ result.provider }} / {{ result.model }} · {{ result.duration_ms }} ms · generated {{ generated_at }}</p>
+    <p><strong>Start URL:</strong> <code>{{ result.artifacts.page_url or result.spec.start_url or "not set" }}</code></p>
+  </header>
+  <section>
+    <h2>Verifications</h2>
+    <table><thead><tr><th>ID</th><th>Expected condition</th><th>Status</th></tr></thead><tbody>
+    {% for verification in result.spec.verifications %}
+      {% set status = result.verification_status.get(verification.id, "unproven") %}
+      <tr><td>{{ verification.id }}</td><td>{{ verification.statement }}{% if verification.implicit %} <span class="muted">(implicit)</span>{% endif %}</td><td class="status status-{{ status }}">{{ status }}</td></tr>
+    {% endfor %}
+    </tbody></table>
+  </section>
+  <section>
+    <h2>Execution steps</h2>
+    <table><thead><tr><th>#</th><th>Tool</th><th>Arguments</th><th>Result</th><th>URL</th></tr></thead><tbody>
+    {% for step in steps %}
+      <tr><td>{{ step.n }}</td><td>{{ step.tool }}</td><td><code>{{ step.args | tojson }}</code></td><td>{{ step.result }}</td><td><code>{{ step.url_after }}</code></td></tr>
+      {% if step.screenshot_relative %}<tr><td colspan="5"><img src="{{ step.screenshot_relative }}" alt="Step {{ step.n }} screenshot"></td></tr>{% endif %}
+    {% endfor %}
+    </tbody></table>
+  </section>
+  <section>
+    <h2>Assertion evidence</h2>
+    {% for assertion in assertions %}
+      <h3>{{ assertion.verification_id }} · {{ assertion.kind }} · {{ "PASSED" if assertion.passed else "FAILED" }}</h3>
+      <p>{{ assertion.detail }}</p>
+      <pre>{{ assertion.args | tojson(indent=2) }}</pre>
+      {% if assertion.screenshot_relative %}<img src="{{ assertion.screenshot_relative }}" alt="Assertion screenshot">{% endif %}
+    {% else %}<p class="muted">No browser assertions were recorded.</p>{% endfor %}
+  </section>
+  <section>
+    <h2>Observed page text</h2><pre>{{ result.artifacts.page_text or "(not captured)" }}</pre>
+    <p class="muted">LLM calls: {{ result.llm_usage.calls }} · input tokens: {{ result.llm_usage.input_tokens }} · output tokens: {{ result.llm_usage.output_tokens }}</p>
+    <p class="muted">Trace: {{ result.artifacts.trace_zip or "not recorded" }}</p>
+  </section>
+</body>
+</html>

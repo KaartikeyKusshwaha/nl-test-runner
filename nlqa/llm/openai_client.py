@@ -45,6 +45,19 @@ class OpenAIClient:
         except (ValueError, TypeError):
             return None
 
+    def ping(self) -> None:
+        """Make the configured provider/model connectivity check with one output token."""
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": "Reply with the single digit 1."}],
+                max_completion_tokens=1,
+                temperature=0,
+            )
+            self.usage.add(response.usage)
+        except Exception as exc:
+            raise LLMError(f"The provider ping failed ({type(exc).__name__}).") from exc
+
     def complete_json(self, *, system: str, user: str, schema: dict[str, Any]) -> dict[str, Any]:
         tool = {
             "name": "return_json",

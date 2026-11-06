@@ -50,6 +50,21 @@ class AnthropicClient:
         except (ValueError, TypeError):
             return None
 
+    def ping(self) -> None:
+        """Make the configured provider/model connectivity check with one output token."""
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=1,
+                temperature=0,
+                messages=[{"role": "user", "content": "Reply with the single digit 1."}],
+            )
+            self.usage.calls += 1
+            self.usage.input_tokens += int(response.usage.input_tokens or 0)
+            self.usage.output_tokens += int(response.usage.output_tokens or 0)
+        except Exception as exc:
+            raise LLMError(f"The provider ping failed ({type(exc).__name__}).") from exc
+
     def complete_json(self, *, system: str, user: str, schema: dict[str, Any]) -> dict[str, Any]:
         response = self._request(
             system=system,

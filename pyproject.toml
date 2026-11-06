@@ -34,6 +34,9 @@ nlqa = "nlqa.cli:main"
 [tool.setuptools.packages.find]
 include = ["nlqa*"]
 
+[tool.setuptools.package-data]
+nlqa = ["snapshot.js", "templates/*.j2"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["live: requires internet and a configured LLM provider"]

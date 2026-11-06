@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     llm_base_url: str | None = None
     nlqa_max_steps: int = Field(default=30, ge=1, le=100)
     nlqa_max_seconds: int = Field(default=240, ge=1, le=1800)
+    nlqa_action_timeout_ms: int = Field(default=10000, ge=100, le=60000)
     nlqa_headless: bool = True
     nlqa_judge: bool = True
     nlqa_assert_timeout_ms: int = Field(default=5000, ge=100, le=30000)
