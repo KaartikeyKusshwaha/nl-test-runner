@@ -27,6 +27,10 @@ dev = [
   "pytest-timeout>=2.4.0",
   "ruff>=0.17.4",
 ]
+web = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.34.0",
+]
 
 [project.scripts]
 nlqa = "nlqa.cli:main"
@@ -35,7 +39,7 @@ nlqa = "nlqa.cli:main"
 include = ["nlqa*"]
 
 [tool.setuptools.package-data]
-nlqa = ["snapshot.js", "templates/*.j2"]
+nlqa = ["snapshot.js", "templates/*.j2", "templates/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

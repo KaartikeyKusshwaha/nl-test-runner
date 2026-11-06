@@ -69,6 +69,31 @@ Free-plan quotas and model availability can change. The client honors provider r
 
 For other adapters, use `LLM_PROVIDER=anthropic`, or `LLM_PROVIDER=openai_compatible` with `LLM_BASE_URL` and `OPENAI_API_KEY`. Provider libraries are installed by the development extra; a minimum installation can use `pip install -e ".[openai]"` or `pip install -e ".[anthropic]"`.
 
+## Optional web interface
+
+The same generic runner can be used through a small authenticated web page. It accepts a public website URL and a plain-English test case, then shows the browser-evidence result. The model API key remains on the server. The page permits one run at a time; it does not save run history, reports, or screenshots.
+
+After installing the project, add the web dependencies and set the environment for the shell where the app will run:
+
+```powershell
+pip install -e ".[web,openai]"
+playwright install chromium
+$env:LLM_PROVIDER = "openai_compatible"
+$env:LLM_BASE_URL = "https://api.groq.com/openai/v1"
+$env:LLM_MODEL = "<model-id-available-to-your-account>"
+$env:OPENAI_API_KEY = "<your-provider-api-key>"
+$env:APP_ACCESS_TOKEN = "<a-long-private-access-code>"
+python -m uvicorn nlqa.web:app --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000`. Enter the same private access code set in `APP_ACCESS_TOKEN`; it protects the run API and is never sent to the model. Do not commit or paste API keys or access codes into the repository.
+
+### Deploy the web interface to Render
+
+The repository includes `Dockerfile` and `render.yaml` for a free-tier Render web service. In Render, create a new Blueprint from this repository and provide the prompted values for `LLM_MODEL`, `OPENAI_API_KEY`, and `APP_ACCESS_TOKEN`. Use a model ID available to the configured provider, a Groq API key (or another compatible provider key), and a strong private access code. Keep these values in Render's environment settings; do not add them to GitHub. Render builds the container, installs Chromium, and gives the service a public `onrender.com` address when deployment succeeds.
+
+The hosted runner rejects localhost and private literal IP addresses as test targets, limits each run's time and steps, and accepts one concurrent run. It is intended for controlled demonstrations; test only sites and accounts you are authorized to use. A host restart clears in-memory run status, and report artifacts are removed after each run.
+
 ## Check setup
 
 ```bash
