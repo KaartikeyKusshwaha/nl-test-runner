@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,11 +31,12 @@ class Observation:
     def prompt_section(self) -> str:
         """Render bounded page content as explicitly untrusted data."""
         return (
-            f'<page url="{self.url}" title="{self.title}">\n'
-            f"INTERACTIVE ELEMENTS:\n{chr(10).join(self.lines) or '(none)'}\n"
-            f"HEADINGS: {json.dumps(self.headings, ensure_ascii=False)}\n"
-            f"VISIBLE TEXT EXCERPT:\n{self.text or '(empty)'}\n"
-            f"ALERTS/DIALOGS: {json.dumps(self.alerts, ensure_ascii=False)}\n"
+            f'<page url="{html.escape(self.url, quote=True)}" '
+            f'title="{html.escape(self.title, quote=True)}">\n'
+            f"INTERACTIVE ELEMENTS:\n{html.escape(chr(10).join(self.lines)) or '(none)'}\n"
+            f"HEADINGS: {html.escape(json.dumps(self.headings, ensure_ascii=False))}\n"
+            f"VISIBLE TEXT EXCERPT:\n{html.escape(self.text) or '(empty)'}\n"
+            f"ALERTS/DIALOGS: {html.escape(json.dumps(self.alerts, ensure_ascii=False))}\n"
             f"ELEMENT LIST TRUNCATED: {self.truncated}\n</page>"
         )
 
