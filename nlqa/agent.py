@@ -183,6 +183,7 @@ class TestAgent:
                 )
 
             try:
+                failed_assertion = False
                 actual_args, safe_args = self.secret_store.substitute_args(
                     call.args,
                     allowed_names=_placeholder_names(spec) | (allowed_placeholders or set()),
@@ -197,6 +198,7 @@ class TestAgent:
                     )
                     assertions.append(record)
                     succeeded = True
+                    failed_assertion = not record.passed
                     detail = record.detail
                     screenshot = record.screenshot
                 else:
@@ -249,6 +251,13 @@ class TestAgent:
             )
             last_result = self.secret_store.mask(detail)
             consecutive_errors = 0 if succeeded else consecutive_errors + 1
+            if failed_assertion:
+                decision = evaluate_finish(
+                    "fail", "A required browser assertion was not satisfied.", spec, assertions
+                )
+                return self._result(
+                    decision, spec, steps, assertions, started_at, started, observation
+                )
             if consecutive_errors >= self.max_consecutive_errors:
                 decision = abort_verdict(
                     f"{consecutive_errors} consecutive browser tool errors", spec, assertions

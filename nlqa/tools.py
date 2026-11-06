@@ -252,7 +252,8 @@ def validate_tool_call(
             return f"Unknown verification_id '{verification_id}'."
         text = call.args.get("text", call.args.get("substring", call.args.get("contains", "")))
         if isinstance(text, str) and (
-            len(text.strip()) < 3 or text.strip().lower() in {"the", "a", "an", "yes", "no"}
+            (len(text.strip()) < 3 and not text.strip().isdigit())
+            or text.strip().lower() in {"the", "a", "an", "yes", "no"}
         ):
             return "Assertion text must be at least 3 distinctive characters and not a stop-word."
     if "ref" in call.args and call.args["ref"] not in {

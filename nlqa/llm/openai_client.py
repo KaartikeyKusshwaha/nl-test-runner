@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import time
 from typing import Any
 
@@ -11,6 +12,42 @@ from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, 
 
 from nlqa.llm.base import LLMError, Usage, openai_tool
 from nlqa.models import ToolCall
+
+_RETRY_PART = re.compile(r"(\d+(?:\.\d+)?)(ms|s|m|h|d)", re.IGNORECASE)
+
+
+def _duration_seconds(value: str | None) -> float | None:
+    """Parse a numeric or compound duration from an HTTP retry header."""
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value.strip()))
+    except ValueError:
+        pass
+    parts = list(_RETRY_PART.finditer(value.strip()))
+    compact = re.sub(r"[\s,]", "", value.strip().lower())
+    if not parts or "".join(match.group(0).lower() for match in parts) != compact:
+        return None
+    scale = {"ms": 0.001, "s": 1.0, "m": 60.0, "h": 3600.0, "d": 86400.0}
+    return sum(float(match.group(1)) * scale[match.group(2).lower()] for match in parts)
+
+
+def _retry_delay_seconds(exc: Exception, attempt: int) -> float:
+    """Respect provider reset headers, with bounded exponential fallback."""
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", {})
+    delays = [
+        parsed
+        for name in ("retry-after", "x-ratelimit-reset-tokens")
+        if (parsed := _duration_seconds(headers.get(name))) is not None
+    ]
+    if headers.get("x-ratelimit-remaining-requests") == "0":
+        request_reset = _duration_seconds(headers.get("x-ratelimit-reset-requests"))
+        if request_reset is not None:
+            delays.append(request_reset)
+    if delays:
+        return min(max(max(delays), 0.25), 60.0)
+    return min(0.5 * (2**attempt), 8.0)
 
 
 class OpenAIClient:
@@ -84,6 +121,7 @@ class OpenAIClient:
 
     def _request(self, **kwargs: Any) -> Any:
         last_status: int | None = None
+        retried_tool_failure = False
         for attempt in range(3):
             try:
                 response = self.client.chat.completions.create(model=self.model, **kwargs)
@@ -94,8 +132,18 @@ class OpenAIClient:
                     raise LLMError(
                         "The model request failed after three retryable attempts."
                     ) from exc
+                time.sleep(_retry_delay_seconds(exc, attempt))
+                continue
             except APIStatusError as exc:
                 last_status = exc.status_code
+                if exc.code == "tool_use_failed":
+                    if retried_tool_failure or attempt == 2:
+                        raise LLMError(
+                            "The model did not return a usable tool call after retry."
+                        ) from exc
+                    retried_tool_failure = True
+                    time.sleep(0.25)
+                    continue
                 if exc.status_code < 500 and exc.status_code != 429:
                     raise LLMError(
                         f"The model rejected the request (HTTP {exc.status_code}). "
@@ -105,6 +153,8 @@ class OpenAIClient:
                     raise LLMError(
                         f"The model request failed after three attempts (HTTP {last_status})."
                     ) from exc
+                time.sleep(_retry_delay_seconds(exc, attempt))
+                continue
             except Exception as exc:
                 if attempt == 2:
                     raise LLMError("The model request failed after three attempts.") from exc

@@ -27,8 +27,9 @@ AGENT_SYSTEM = (
     "actions.\n"
     "4. To prove a verification, call an assert_* tool with that verification_id. Assertions are "
     "checked by the system against the live page, so choose short, distinctive, observable "
-    "evidence (a heading, message, URL fragment, element state). Avoid generic words that appear "
-    "everywhere.\n"
+    "evidence (a heading, message, URL fragment, element state). For a numeric badge or counter, "
+    "assert its visible number on the corresponding element, not a longer accessible label that "
+    "may include hidden wording. Avoid generic words that appear everywhere.\n"
     '5. When all verifications are proven, call finish(verdict="pass").\n'
     "6. If an expected condition is NOT met, do not give up silently: call the matching assert_* "
     "tool "

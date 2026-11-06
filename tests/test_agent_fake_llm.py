@@ -91,6 +91,7 @@ def test_expected_dashboard_missing_is_evidence_backed_fail(page, site_server: s
     )
     assert result.outcome is Outcome.FAIL
     assert "not visible" in result.reason
+    assert fake.usage.calls == 4  # It stops as soon as the failed assertion proves FAIL.
 
 
 def test_premature_pass_is_rejected_then_model_proves_verification(page, site_server: str) -> None:

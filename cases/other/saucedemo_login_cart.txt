@@ -1,4 +1,4 @@
 # name: Sauce Demo add first product to cart
 # url: https://www.saucedemo.com/
 # expect: pass
-Log in with the standard practice credentials shown on the page, add the first product to the cart, and verify the cart shows 1 item.
+Log in with the standard practice credentials shown on the page, add the first product to the cart, and verify the cart badge's visible count is exactly "1".
