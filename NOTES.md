@@ -8,6 +8,7 @@
 - Playwright 1.64.1 and its managed Chromium are installed; local browser integration tests run offline.
 - Milestone C-M0 evidence: `nlqa --help` exits successfully; `ruff check .` reports `All checks passed!`.
 - Milestones C-M1–C-M4: `python -m pytest -q` passes all 17 offline tests; `ruff check .` passes.
+- Milestone C-M5: table-driven verdict and evidence-guard tests pass (10 tests); the judge can only downgrade a candidate PASS.
 - `nlqa doctor` confirms the browser install; no model is configured yet, so live LLM runs remain pending.
 
 ## Decisions
