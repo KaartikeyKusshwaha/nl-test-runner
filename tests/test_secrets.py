@@ -1,5 +1,5 @@
-from tempfile import TemporaryDirectory
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
 
@@ -8,7 +8,9 @@ from nlqa.secrets import SecretStore
 
 def test_placeholder_values_are_substituted_only_at_execution_boundary() -> None:
     store = SecretStore({"CUSTOMER_PASSWORD": "S3cr3t!", "CUSTOMER_EMAIL": "qa@example.test"})
-    actual, safe = store.substitute_args({"text": "{{CUSTOMER_PASSWORD}}", "email": "{{CUSTOMER_EMAIL}}"})
+    actual, safe = store.substitute_args(
+        {"text": "{{CUSTOMER_PASSWORD}}", "email": "{{CUSTOMER_EMAIL}}"}
+    )
     assert actual == {"text": "S3cr3t!", "email": "qa@example.test"}
     assert safe == {"text": "{{CUSTOMER_PASSWORD}}", "email": "{{CUSTOMER_EMAIL}}"}
     assert store.mask("typed S3cr3t! and qa@example.test") == "typed **** and ****"
@@ -30,4 +32,6 @@ def test_dotenv_values_are_loaded_without_printing_them() -> None:
 
 def test_nested_report_data_is_masked() -> None:
     store = SecretStore({"OPENAI_API_KEY": "key-value"})
-    assert store.mask_object({"steps": [{"result": "used key-value"}]}) == {"steps": [{"result": "used ****"}]}
+    assert store.mask_object({"steps": [{"result": "used key-value"}]}) == {
+        "steps": [{"result": "used ****"}]
+    }

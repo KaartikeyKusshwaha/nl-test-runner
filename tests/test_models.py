@@ -1,5 +1,5 @@
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
 from nlqa.models import TestSpec, Verification
 
@@ -21,8 +21,13 @@ def test_verification_ids_must_be_unique() -> None:
 
 
 def test_defaults_are_per_instance_and_implicit_is_available() -> None:
-    first = TestSpec(goal="Search", verifications=[Verification(id="v1", statement="Results are shown", implicit=True)])
-    second = TestSpec(goal="Login", verifications=[Verification(id="v1", statement="Dashboard is shown")])
+    first = TestSpec(
+        goal="Search",
+        verifications=[Verification(id="v1", statement="Results are shown", implicit=True)],
+    )
+    second = TestSpec(
+        goal="Login", verifications=[Verification(id="v1", statement="Dashboard is shown")]
+    )
     first.steps.append("click search")
     assert second.steps == []
     assert first.verifications[0].implicit is True

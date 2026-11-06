@@ -11,7 +11,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Runtime settings. API credentials are never included in repr output."""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False)
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=False
+    )
 
     llm_provider: Literal["openai", "anthropic", "openai_compatible", "fake"] = "openai"
     llm_model: str = ""
@@ -45,6 +47,8 @@ class Settings(BaseSettings):
             return "OPENAI_API_KEY is not set. Add it to .env or the environment."
         if self.llm_provider == "anthropic" and not self.anthropic_api_key:
             return "ANTHROPIC_API_KEY is not set. Add it to .env or the environment."
-        if self.llm_provider == "openai_compatible" and not (self.openai_api_key and self.llm_base_url):
+        if self.llm_provider == "openai_compatible" and not (
+            self.openai_api_key and self.llm_base_url
+        ):
             return "OpenAI-compatible mode needs OPENAI_API_KEY and LLM_BASE_URL."
         return None

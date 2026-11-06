@@ -22,16 +22,23 @@ class SecretStore:
 
     def __post_init__(self) -> None:
         self.sensitive_values.update(
-            value for key, value in self.values.items()
+            value
+            for key, value in self.values.items()
             if key.upper().endswith(("PASSWORD", "TOKEN", "KEY", "SECRET")) and value
         )
 
     @classmethod
-    def from_environment(cls, env_file: str | Path = ".env", environ: dict[str, str] | None = None) -> SecretStore:
+    def from_environment(
+        cls, env_file: str | Path = ".env", environ: dict[str, str] | None = None
+    ) -> SecretStore:
         values = {key: value for key, value in dotenv_values(env_file).items() if value is not None}
         values.update(environ if environ is not None else os.environ)
         normalized = {str(key): str(value) for key, value in values.items()}
-        sensitive = {value for key, value in normalized.items() if key.upper().endswith(("PASSWORD", "TOKEN", "KEY", "SECRET")) and value}
+        sensitive = {
+            value
+            for key, value in normalized.items()
+            if key.upper().endswith(("PASSWORD", "TOKEN", "KEY", "SECRET")) and value
+        }
         return cls(normalized, sensitive)
 
     def substitute(self, value: str) -> str:
