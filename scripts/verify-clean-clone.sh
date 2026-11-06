@@ -5,9 +5,12 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 git clone --no-hardlinks "$ROOT" "$TMP/repo"
 cd "$TMP/repo"
-python -m pip install -e ".[dev]"
-playwright install chromium
-ruff check .
-pytest -m "not live"
-nlqa --help
+python -m venv .venv
+PY=".venv/bin/python"
+if [[ -x ".venv/Scripts/python.exe" ]]; then PY=".venv/Scripts/python.exe"; fi
+"$PY" -m pip install -e ".[dev]"
+"$PY" -m playwright install chromium
+"$PY" -m ruff check .
+"$PY" -m pytest -m "not live"
+"$PY" -m nlqa --help
 echo "Clean-clone verification passed."

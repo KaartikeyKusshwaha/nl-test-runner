@@ -46,6 +46,7 @@ The official demo page lists customer, admin, agent, and supplier logins, but th
 - Keep model and provider selection entirely in configuration; `LLM_MODEL` has no code default.
 - Keep provider SDKs optional for end users and include them in the development extra for adapter tests.
 - Store reports, traces, screenshots, and secret values only in ignored local paths.
+- The clean-clone verification creates its own `.venv` inside the temporary clone so it does not install dependencies into the machine's default Python environment.
 
 ## Limitations
 
