@@ -1,0 +1,4 @@
+# name: PHPTravels hotel search
+# url: {{PHPTRAVELS_STOREFRONT_URL}}
+# expect: pass
+Search for hotels in London for next week and verify that search results are listed. Do not book a room or submit payment.

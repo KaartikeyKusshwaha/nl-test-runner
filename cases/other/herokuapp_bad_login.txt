@@ -1,0 +1,4 @@
+# name: The Internet rejects invalid login
+# url: https://the-internet.herokuapp.com/login
+# expect: pass
+Log in with an invalid username and password and verify an error message is displayed.

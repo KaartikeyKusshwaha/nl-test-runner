@@ -1,0 +1,4 @@
+# name: PHPTravels false dashboard claim
+# url: {{PHPTRAVELS_CUSTOMER_URL}}
+# expect: fail
+Log in as a customer using {{PHPTRAVELS_CUSTOMER_EMAIL}} and {{PHPTRAVELS_CUSTOMER_PASSWORD}}, then verify the page says "Welcome back Zebra Unicorn".

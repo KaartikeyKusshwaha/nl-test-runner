@@ -223,3 +223,31 @@ def test_repeating_same_action_on_unchanged_page_is_stopped(page) -> None:
     )
     assert result.outcome is Outcome.ERROR
     assert "stuck repeating" in result.reason
+
+
+def test_same_engine_passes_a_differently_structured_shop_site(page, site_server: str) -> None:
+    page.goto(f"{site_server}/shop_basic.html")
+    controller = BrowserController(page)
+    observation = controller.snapshot()
+    add_line = next(line for line in observation.lines if "Add item" in line)
+    add_ref = add_line.split("]", 1)[0][1:]
+    fake = FakeLLM(
+        tool_calls=[
+            ToolCall(name="click", args={"ref": add_ref}),
+            ToolCall(
+                name="assert_text_visible",
+                args={"text": "Cart: 1", "verification_id": "v1"},
+            ),
+            ToolCall(name="finish", args={"verdict": "pass", "reason": "Cart verified"}),
+        ],
+        json_responses=[{"results": [{"id": "v1", "supports": True, "why": "Cart count is one."}]}],
+    )
+    result = TestAgent(fake, controller, judge_enabled=True).run(
+        TestSpec(
+            goal="Add the first item to the cart",
+            steps=["Add the notebook"],
+            verifications=[Verification(id="v1", statement="The cart shows one item")],
+        )
+    )
+    assert result.outcome is Outcome.PASS
+    assert result.verification_status["v1"] == "proven"

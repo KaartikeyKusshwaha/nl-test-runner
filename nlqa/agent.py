@@ -56,7 +56,9 @@ class TestAgent:
         self.judge_enabled = judge_enabled
         self.llm_repair_attempts = llm_repair_attempts
 
-    def run(self, spec: TestSpec) -> RunResult:
+    def run(
+        self, spec: TestSpec, *, allowed_placeholders: set[str] | None = None
+    ) -> RunResult:
         """Run until a gated finish, a failing verification, or a bounded stop."""
         started = time.monotonic()
         started_at = datetime.now(UTC).isoformat()
@@ -182,7 +184,8 @@ class TestAgent:
 
             try:
                 actual_args, safe_args = self.secret_store.substitute_args(
-                    call.args, allowed_names=_placeholder_names(spec)
+                    call.args,
+                    allowed_names=_placeholder_names(spec) | (allowed_placeholders or set()),
                 )
                 if call.name in ASSERTION_TOOLS:
                     record = run_assertion(

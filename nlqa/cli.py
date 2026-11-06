@@ -25,7 +25,7 @@ from nlqa.llm.factory import create_client
 from nlqa.llm.fake import FakeLLM
 from nlqa.models import Outcome, RunResult
 from nlqa.report import create_run_directory, redact_trace, write_report
-from nlqa.secrets import SecretStore
+from nlqa.secrets import PLACEHOLDER, SecretStore
 from nlqa.spec_extractor import SpecExtractionError, extract_spec
 from nlqa.verdict import abort_verdict
 
@@ -200,6 +200,7 @@ def _run_text(
     text: str, *, file_url: str | None, args: argparse.Namespace
 ) -> tuple[int, RunResult | None]:
     settings = _settings_for(args)
+    secret_store = SecretStore.from_environment()
     try:
         settings, fake = _fake_client(settings)
         error = settings.provider_error()
@@ -207,18 +208,22 @@ def _run_text(
             raise LLMError(error)
         client = create_client(settings, fake=fake)
         spec = extract_spec(client, text)
-        start_url = args.url or file_url or spec.start_url
-        if not start_url:
+        requested_url = args.url or file_url or spec.start_url
+        if not requested_url:
             raise SpecExtractionError(
                 "No start URL was provided. Pass --url or include one in the test case."
             )
-        spec = spec.model_copy(update={"start_url": start_url})
+        allowed_url_names = set(PLACEHOLDER.findall(requested_url))
+        start_url = secret_store.substitute(requested_url, allowed_names=allowed_url_names)
+        spec = spec.model_copy(update={"start_url": secret_store.mask(requested_url)})
     except (LLMError, SpecExtractionError) as exc:
         console.print(f"[bold red]RESULT: ERROR[/bold red] {exc}")
         return 2, None
+    except ValueError as exc:
+        console.print(f"[bold red]RESULT: ERROR[/bold red] {secret_store.mask(str(exc))}")
+        return 2, None
 
     run_dir = create_run_directory(settings.nlqa_report_dir, spec.goal)
-    secret_store = SecretStore.from_environment()
     result: RunResult | None = None
     trace_path = run_dir / "trace.zip"
     video_dir = run_dir / "video"
@@ -261,7 +266,9 @@ def _run_text(
                     max_elements=settings.nlqa_max_elements,
                     judge_enabled=settings.nlqa_judge,
                 )
-                result = agent.run(spec)
+                result = agent.run(
+                    spec, allowed_placeholders=set(PLACEHOLDER.findall(text))
+                )
             except Exception as exc:
                 decision = abort_verdict(f"browser setup failed ({type(exc).__name__})", spec, [])
                 result = RunResult(

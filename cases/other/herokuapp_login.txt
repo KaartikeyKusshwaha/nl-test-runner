@@ -1,0 +1,4 @@
+# name: The Internet example login
+# url: https://the-internet.herokuapp.com/login
+# expect: pass
+Log in with the practice credentials shown on the page and verify a success message is displayed.

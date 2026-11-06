@@ -1,0 +1,4 @@
+# name: PHPTravels customer login
+# url: {{PHPTRAVELS_CUSTOMER_URL}}
+# expect: pass
+Log in as a customer using the email {{PHPTRAVELS_CUSTOMER_EMAIL}} and password {{PHPTRAVELS_CUSTOMER_PASSWORD}}, then verify the customer dashboard or account page is shown.
