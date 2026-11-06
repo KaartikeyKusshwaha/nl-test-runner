@@ -94,6 +94,87 @@ def test_expected_dashboard_missing_is_evidence_backed_fail(page, site_server: s
     assert fake.usage.calls == 4  # It stops as soon as the failed assertion proves FAIL.
 
 
+def test_waiting_for_the_expected_text_records_a_failing_assertion(page) -> None:
+    page.set_content("<h1>Public homepage</h1>")
+    fake = FakeLLM(
+        tool_calls=[
+            ToolCall(
+                name="wait_for_text",
+                args={"text": "Welcome back Zebra Unicorn", "timeout_s": 5},
+            )
+        ]
+    )
+    test_spec = TestSpec(
+        goal="The homepage shows the claimed greeting",
+        steps=["Check the public homepage"],
+        verifications=[
+            Verification(
+                id="v1",
+                statement='The homepage shows the exact greeting "Welcome back Zebra Unicorn"',
+                implicit=False,
+            )
+        ],
+    )
+
+    result = TestAgent(fake, BrowserController(page), judge_enabled=False).run(test_spec)
+
+    assert result.outcome is Outcome.FAIL
+    assert result.steps[-1].tool == "assert_text_visible"
+    assert result.assertions[0].passed is False
+
+
+def test_action_is_discarded_when_page_changes_during_model_turn(page) -> None:
+    page.set_content(
+        """<button id="stays">Stays</button><p id="result"></p>
+        <script>document.querySelector('#stays').addEventListener('click', () => {
+          document.querySelector('#result').textContent = 'Stays selected';
+        });</script>"""
+    )
+    calls = 0
+
+    def answer(_system: str, user: str) -> ToolCall:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            page.evaluate(
+                """() => {
+                  const overlay = document.createElement('div');
+                  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999';
+                  const button = document.createElement('button');
+                  button.textContent = 'I Understand and Continue';
+                  button.onclick = () => overlay.remove();
+                  overlay.append(button);
+                  document.body.append(overlay);
+                }"""
+            )
+            return ToolCall(name="click", args={"ref": "e1"})
+        if calls == 2:
+            assert "top-overlay" in user
+            return ToolCall(name="click", args={"ref": "e1"})
+        if calls == 3:
+            return ToolCall(name="click", args={"ref": "e1"})
+        if calls == 4:
+            return ToolCall(
+                name="assert_text_visible",
+                args={"text": "Stays selected", "verification_id": "v1"},
+            )
+        return ToolCall(name="finish", args={"verdict": "pass", "reason": "Stays selected"})
+
+    test_spec = TestSpec(
+        goal="Choose Stays",
+        steps=["Click the Stays tab"],
+        verifications=[Verification(id="v1", statement="Stays is selected", implicit=False)],
+    )
+    result = TestAgent(
+        FakeLLM(tool_calls=answer), BrowserController(page), judge_enabled=False
+    ).run(test_spec)
+
+    assert result.outcome is Outcome.PASS
+    assert result.steps[0].tool == "stale_observation"
+    assert result.steps[1].tool == "click"
+    assert result.steps[2].tool == "click"
+
+
 def test_premature_pass_is_rejected_then_model_proves_verification(page, site_server: str) -> None:
     page.goto(f"{site_server}/login_basic.html")
     fake = FakeLLM(

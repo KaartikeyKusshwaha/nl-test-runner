@@ -32,3 +32,15 @@ def test_short_non_numeric_assertions_remain_rejected() -> None:
     )
 
     assert "distinctive" in (validate_tool_call(call, observation(), {"v1"}) or "")
+
+
+def test_single_generic_word_is_not_accepted_as_text_evidence() -> None:
+    call = ToolCall(
+        name="assert_text_visible",
+        args={"text": "Hotel", "verification_id": "v1"},
+    )
+
+    error = validate_tool_call(call, observation(), {"v1"})
+
+    assert error is not None
+    assert "one-word" in error

@@ -125,6 +125,37 @@ class TestAgent:
                     )
                 continue
 
+            current_observation = self.controller.snapshot(self.max_elements)
+            if current_observation.hash != observation.hash:
+                last_result = (
+                    "The page changed while the action was being selected; it was not run. "
+                    "Use the latest page observation and its references."
+                )
+                history.append(f"{step_number}. stale observation -> {last_result}")
+                steps.append(
+                    self._step(
+                        step_number,
+                        "stale_observation",
+                        {},
+                        False,
+                        last_result,
+                        self.secret_store.mask(current_observation.url),
+                        iteration_started,
+                    )
+                )
+                consecutive_errors = 0
+                continue
+
+            if call.name == "wait_for_text":
+                verification_id = _verification_for_waited_text(
+                    spec, str(call.args["text"])
+                )
+                if verification_id:
+                    call = ToolCall(
+                        name="assert_text_visible",
+                        args={"text": call.args["text"], "verification_id": verification_id},
+                    )
+
             safe_args = self.secret_store.mask_object(call.args)
             fingerprint = json.dumps(
                 [observation.hash, call.name, safe_args], sort_keys=True, ensure_ascii=False
@@ -365,3 +396,15 @@ def _placeholder_names(spec: TestSpec) -> set[str]:
         source.append(spec.start_url)
     source.extend(item.statement for item in spec.verifications)
     return {match.group(1) for value in source for match in PLACEHOLDER.finditer(value)}
+
+
+def _verification_for_waited_text(spec: TestSpec, text: str) -> str | None:
+    """Turn a wait for stated verification evidence into a recorded assertion."""
+    needle = " ".join(text.casefold().split()).strip(" \t\r\n\"'`.,:;!?()[]{}")
+    if len(needle) < 3:
+        return None
+    for verification in spec.verifications:
+        statement = " ".join(verification.statement.casefold().split())
+        if needle in statement:
+            return verification.id
+    return None

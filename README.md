@@ -177,7 +177,7 @@ Exit codes: `0` PASS, `1` evidence-backed FAIL or selfcheck mismatch, `2` ERROR/
 - The model can choose a poor action or weak assertion; the evidence gate reduces but cannot eliminate that risk.
 - Vague requirements can produce a poor extracted spec. Review the extracted verifications in the report.
 - No vision-based interaction, CAPTCHA/MFA bypass, drag-and-drop, file upload/download, or closed-shadow-root support.
-- External demo sites can change or block automation; hotel search and live credentials may be flaky or unavailable.
+- External demo sites can change or block automation; PHPTravels may return an explicit empty hotel-results state, and live credentials may be flaky or unavailable.
 - Prompt-injection defenses and navigation restrictions reduce risk but cannot guarantee safety on arbitrary sites. Avoid destructive actions and never test with real customer data.
 
 See [NOTES.md](NOTES.md) for implementation decisions, verified results, live-site findings, and current open items.

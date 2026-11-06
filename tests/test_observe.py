@@ -47,3 +47,43 @@ def test_untrusted_page_text_cannot_close_prompt_delimiter(page) -> None:
     section = observe(page).prompt_section()
     assert section.count("</page>") == 1
     assert "&lt;/page&gt;" in section
+
+
+def test_observation_prioritizes_dismiss_action_in_top_overlay(page) -> None:
+    page.set_content(
+        """<button>Underlying Stays tab</button>
+        <div style="position:fixed;inset:0;z-index:9999">
+          <a href="/help">Learn More</a>
+          <button>I Understand and Continue</button>
+        </div>"""
+    )
+
+    snapshot = observe(page)
+
+    assert "I Understand and Continue" in snapshot.lines[0]
+    assert "top-overlay" in snapshot.lines[0]
+    assert any("Underlying Stays tab" in line for line in snapshot.lines[1:])
+
+
+def test_observation_exposes_custom_pointer_control(page) -> None:
+    page.set_content(
+        '<div role="tabpanel"><div style="cursor:pointer;width:260px;height:60px">'
+        "<span>Destination</span></div></div>"
+    )
+
+    snapshot = observe(page)
+
+    assert any('"Destination"' in line and "custom control" in line for line in snapshot.lines)
+
+
+def test_observation_prefers_visible_input_over_clickable_wrapper(page) -> None:
+    page.set_content(
+        '<div role="tabpanel"><div style="cursor:pointer;width:260px;height:80px">'
+        'Destination Search By City</div><input type="text" placeholder="Search By City"></div>'
+    )
+
+    snapshot = observe(page)
+    joined = "\n".join(snapshot.lines)
+
+    assert 'input "Search By City"' in joined
+    assert "custom control" not in joined

@@ -1,4 +1,4 @@
 # name: PHPTravels false dashboard claim
-# url: {{PHPTRAVELS_CUSTOMER_URL}}
+# url: {{PHPTRAVELS_STOREFRONT_URL}}
 # expect: fail
-Log in as a customer using {{PHPTRAVELS_CUSTOMER_EMAIL}} and {{PHPTRAVELS_CUSTOMER_PASSWORD}}, then verify the page says "Welcome back Zebra Unicorn".
+On the public PHPTravels homepage, verify the exact greeting "Welcome back Zebra Unicorn" is visible. This is a deliberate negative check; do not log in or leave the homepage.

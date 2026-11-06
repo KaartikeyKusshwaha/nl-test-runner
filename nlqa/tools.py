@@ -256,6 +256,16 @@ def validate_tool_call(
             or text.strip().lower() in {"the", "a", "an", "yes", "no"}
         ):
             return "Assertion text must be at least 3 distinctive characters and not a stop-word."
+        if (
+            call.name in {"assert_text_visible", "assert_text_absent"}
+            and isinstance(text, str)
+            and len(text.strip().split()) == 1
+            and not text.strip().isdigit()
+        ):
+            return (
+                "A one-word text assertion is too broad; use a distinctive multi-word phrase, "
+                "or assert a specific element or URL state."
+            )
     if "ref" in call.args and call.args["ref"] not in {
         item["ref"] for item in observation.elements
     }:

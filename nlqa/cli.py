@@ -252,9 +252,10 @@ def _run_text(
                 controller._validate_navigation(start_url)
                 page.goto(
                     start_url,
-                    wait_until="domcontentloaded",
+                    wait_until="commit",
                     timeout=settings.nlqa_action_timeout_ms,
                 )
+                controller.wait_for_page_ready()
                 agent = TestAgent(
                     client,
                     controller,

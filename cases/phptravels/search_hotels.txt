@@ -1,4 +1,4 @@
-# name: PHPTravels hotel search
+# name: PHPTravels London hotel search
 # url: {{PHPTRAVELS_STOREFRONT_URL}}
 # expect: pass
-Search for hotels in London for next week and verify that search results are listed. Do not book a room or submit payment.
+If an informational demo notice blocks the page, dismiss it. Select Stays. Open Destination or Hotel Name, type London into Search By City, and choose the city suggestion named London. Then open Nationality, type India into the Search country field, and select the India option. Keep the default guests and dates and click Search. Verify both that the results URL contains "/stays/london/" and the exact message "No Stays found" is visible. Do not book a room or submit payment.
