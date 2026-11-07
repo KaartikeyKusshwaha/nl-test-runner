@@ -1,4 +1,4 @@
 # name: PHPTravels false dashboard claim
-# url: {{PHPTRAVELS_STOREFRONT_URL}}
+# url: https://phptravels.com/demo
 # expect: fail
-On the public PHPTravels homepage, verify the exact greeting "Welcome back Zebra Unicorn" is visible. This is a deliberate negative check; do not log in or leave the homepage.
+On the official PHPTravels demo page, verify the exact greeting "Welcome back Zebra Unicorn" is visible. This is a deliberate negative check; do not submit the demo form, log in, or leave the page.
