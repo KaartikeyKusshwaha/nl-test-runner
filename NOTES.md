@@ -39,7 +39,7 @@ Groq returned long free-tier cooldowns across live runs (including 590 seconds a
 ## Decisions
 
 - Keep model and provider selection entirely in configuration; `LLM_MODEL` has no code default.
-- Keep the local defaults at 60 observed elements and 512 completion tokens per response. Tune the hosted Render instance to 30 observed elements, the same 512 completion-token budget, and its 360-second maximum run window to reduce prompt use and give longer flows more time.
+- Keep the local defaults at 60 observed elements and 512 completion tokens per response. Tune the hosted Render instance to 30 observed elements, the same 512 completion-token budget, and its 600-second maximum run window to reduce prompt use and give longer flows more time.
 - Keep provider SDKs optional for end users and include them in the development extra for adapter tests.
 - Store reports, traces, screenshots, and secret values only in ignored local paths.
 - The clean-clone verification creates its own `.venv` inside the temporary clone so it does not install dependencies into the machine's default Python environment.

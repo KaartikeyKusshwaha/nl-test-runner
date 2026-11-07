@@ -91,7 +91,7 @@ def _run_job(job_id: str, test_case: str, url: str) -> None:
         job["status"] = "running"
 
     max_steps = _positive_setting("WEB_MAX_STEPS", 24, 40)
-    max_seconds = _positive_setting("WEB_MAX_SECONDS", 180, 360)
+    max_seconds = _positive_setting("WEB_MAX_SECONDS", 180, 600)
     report_root = Path(os.environ.get("NLQA_REPORT_DIR", "reports/web")).resolve()
     run_root = (report_root / job_id).resolve()
     summary: dict[str, Any] = {

@@ -142,7 +142,7 @@
           <div class="actions">
             <button class="primary" id="run" type="submit">Run browser test</button>
             <button class="example" id="example" type="button">Fill a safe example</button>
-            <span class="help">One run at a time · Usually takes under a minute</span>
+            <span class="help">One run at a time · Longer tests can take several minutes</span>
           </div>
         </form>
         <section id="result" class="result" role="status" aria-live="polite">
@@ -226,7 +226,7 @@
           const initial = await started.json();
           if (!started.ok) throw new Error(initial.detail || 'Could not start the run.');
           showMessage('Test queued', 'The browser runner will begin shortly.');
-          const deadline = Date.now() + 6 * 60 * 1000;
+          const deadline = Date.now() + 11 * 60 * 1000;
           while (Date.now() < deadline) {
             await wait(2200);
             const response = await fetch('/api/runs/' + initial.id, {
@@ -246,7 +246,7 @@
                 : 'Waiting for the previous run to finish…'
             );
           }
-          throw new Error('This run took too long to return a result. Check the deployment logs before retrying.');
+          throw new Error('This run exceeded the 11-minute browser wait. Check the deployment logs before retrying.');
         } catch (error) {
           showMessage('Could not complete the run', error.message || 'The request failed.');
         } finally {

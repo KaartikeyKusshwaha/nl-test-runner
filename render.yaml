@@ -24,6 +24,6 @@ services:
       - key: NLQA_MAX_TOKENS
         value: "512"
       - key: WEB_MAX_SECONDS
-        value: "360"
+        value: "600"
       - key: WEB_MAX_STEPS
         value: "24"
