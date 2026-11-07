@@ -14,6 +14,8 @@ from nlqa.llm.base import LLMError, Usage, openai_tool
 from nlqa.models import ToolCall
 
 _RETRY_PART = re.compile(r"(\d+(?:\.\d+)?)(ms|s|m|h|d)", re.IGNORECASE)
+_MAX_ATTEMPTS = 2
+_MAX_RETRY_DELAY_SECONDS = 2.0
 
 
 def _duration_seconds(value: str | None) -> float | None:
@@ -60,7 +62,7 @@ class OpenAIClient:
     ) -> None:
         self.model = model
         self.max_tokens = max_tokens
-        self.client = OpenAI(api_key=api_key, base_url=base_url, max_retries=0, timeout=30)
+        self.client = OpenAI(api_key=api_key, base_url=base_url, max_retries=0, timeout=20)
         self.usage = Usage()
 
     def choose_tool(
@@ -122,22 +124,25 @@ class OpenAIClient:
     def _request(self, **kwargs: Any) -> Any:
         last_status: int | None = None
         retried_tool_failure = False
-        for attempt in range(3):
+        for attempt in range(_MAX_ATTEMPTS):
             try:
                 response = self.client.chat.completions.create(model=self.model, **kwargs)
                 self.usage.add(response.usage)
                 return response
             except (RateLimitError, APITimeoutError, APIConnectionError) as exc:
-                if attempt == 2:
+                if attempt == _MAX_ATTEMPTS - 1:
                     raise LLMError(
-                        "The model request failed after three retryable attempts."
+                        "The model request failed after two retryable attempts "
+                        f"({type(exc).__name__})."
                     ) from exc
-                time.sleep(_retry_delay_seconds(exc, attempt))
+                time.sleep(
+                    min(_retry_delay_seconds(exc, attempt), _MAX_RETRY_DELAY_SECONDS)
+                )
                 continue
             except APIStatusError as exc:
                 last_status = exc.status_code
                 if exc.code == "tool_use_failed":
-                    if retried_tool_failure or attempt == 2:
+                    if retried_tool_failure or attempt == _MAX_ATTEMPTS - 1:
                         raise LLMError(
                             "The model did not return a usable tool call after retry."
                         ) from exc
@@ -149,14 +154,18 @@ class OpenAIClient:
                         f"The model rejected the request (HTTP {exc.status_code}). "
                         "Check provider configuration."
                     ) from exc
-                if attempt == 2:
+                if attempt == _MAX_ATTEMPTS - 1:
                     raise LLMError(
-                        f"The model request failed after three attempts (HTTP {last_status})."
+                        f"The model request failed after two attempts (HTTP {last_status})."
                     ) from exc
-                time.sleep(_retry_delay_seconds(exc, attempt))
+                time.sleep(
+                    min(_retry_delay_seconds(exc, attempt), _MAX_RETRY_DELAY_SECONDS)
+                )
                 continue
             except Exception as exc:
-                if attempt == 2:
-                    raise LLMError("The model request failed after three attempts.") from exc
+                if attempt == _MAX_ATTEMPTS - 1:
+                    raise LLMError(
+                        f"The model request failed after two attempts ({type(exc).__name__})."
+                    ) from exc
             time.sleep(min(0.3 * (2**attempt) + random.random() * 0.1, 2.0))
         raise LLMError("The model request could not be completed.")

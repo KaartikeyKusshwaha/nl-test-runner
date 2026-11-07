@@ -1,4 +1,4 @@
-# name: PHPTravels London hotel search
-# url: {{PHPTRAVELS_STOREFRONT_URL}}
+# name: PHPTravels Dubai hotel search
+# url: https://phptravels.net/stays
 # expect: pass
-If an informational demo notice blocks the page, dismiss it. Select Stays. Open Destination or Hotel Name, type London into Search By City, and choose the city suggestion named London. Then open Nationality, type India into the Search country field, and select the India option. Keep the default guests and dates and click Search. Verify both that the results URL contains "/stays/london/" and the exact message "No Stays found" is visible. Do not book a room or submit payment.
+Dismiss the informational demo notice if it blocks the page. Click the Destination or Hotel Name field and type Dubai in Search By City. Wait for the suggestions, then click the option named Dubai marked Destination. Do not press Enter or move to another field until that city option is selected. Open Nationality, type India in Search country..., and choose India. Keep the default guests and dates, then click Search Hotels. Verify the results URL contains "/stays/dubai/" and the exact message "No Stays found" is visible. Do not open a hotel or submit payment.

@@ -28,6 +28,9 @@
     .map(element => clean(element.getAttribute('aria-label') || element.getAttribute('placeholder') ||
       [...(element.labels || [])].map(label => clean(label.innerText || label.textContent)).join(' ')))
     .filter(label => label.length >= 3);
+  const activeElement = document.activeElement;
+  const activeValue = activeElement && ['input', 'textarea'].includes(activeElement.tagName.toLowerCase())
+    ? clean(activeElement.value).toLowerCase() : '';
   const customPointerRoot = element => {
     const tag = element.tagName.toLowerCase();
     if (!customTags.has(tag) || !visible(element)) return false;
@@ -116,17 +119,21 @@
       inViewport: rect.bottom > 0 && rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth,
       overlay: overlayAncestor(element), custom };
   });
-  const hasOverlay = visibleCandidates.some(item => item.overlay);
   const dismissWords = /\b(accept|agree|understand|continue|dismiss|close|got it|okay|ok)\b/i;
-  if (hasOverlay || visibleCandidates.length > maxElements) {
-    visibleCandidates.sort((a, b) => {
-      const aPriority = a.overlay ? (dismissWords.test(a.name) ? 2 : 1) : 0;
-      const bPriority = b.overlay ? (dismissWords.test(b.name) ? 2 : 1) : 0;
-      return bPriority - aPriority || Number(b.inViewport) - Number(a.inViewport) ||
-        Number(['input', 'select', 'textarea', 'button'].includes(b.tag)) -
-        Number(['input', 'select', 'textarea', 'button'].includes(a.tag)) || a.index - b.index;
-    });
-  }
+  const actionPriority = item => {
+    if (item.overlay) return dismissWords.test(item.name) ? 6 : 5;
+    if (item.custom && activeValue.length >= 2 && item.name.toLowerCase().includes(activeValue)) return 5;
+    if (['input', 'select', 'textarea'].includes(item.tag) || item.custom ||
+        ['combobox', 'checkbox', 'radio', 'switch', 'option'].includes(item.role)) return 4;
+    if (['button', 'tab', 'menuitem'].includes(item.role) || item.tag === 'button') return 3;
+    if (item.tag === 'a' || item.role === 'link') return 1;
+    return 2;
+  };
+  // Put form controls ahead of navigation and social links, even when the page
+  // has fewer elements than the output cap. Otherwise a footer link can be
+  // offered before the custom form control the test needs.
+  visibleCandidates.sort((a, b) => actionPriority(b) - actionPriority(a) ||
+    Number(b.inViewport) - Number(a.inViewport) || a.index - b.index);
   const truncated = visibleCandidates.length > maxElements;
   const selected = visibleCandidates.slice(0, maxElements);
   const elements = [];

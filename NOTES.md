@@ -19,7 +19,7 @@ The spec-extraction prompt requires observable conditions, only accepts URLs pre
 - Created an isolated `.venv` and installed the declared Task 2 dependencies; the environment is ignored by Git.
 - Playwright 1.64.1 and its managed Chromium are installed; local browser integration tests run offline.
 - Milestone C-M0 evidence: `nlqa --help` exits successfully; `ruff check .` reports `All checks passed!`.
-- Milestones C-M1–C-M9: `ruff check .` passes; latest offline run `pytest -m "not live" -q` reports 55 passed and 1 live test deselected.
+- Milestones C-M1–C-M9: `ruff check .` passes; latest offline run `pytest -m "not live" -q` reports 67 passed and 1 live test deselected.
 - C-M5 verdict tests cover the finish rules; the judge can only downgrade a candidate PASS.
 - C-M6 extraction tests cover explicit URLs, implicit expectations, malformed output, and generic cases. Page-controlled content is HTML-escaped inside the untrusted prompt boundary.
 - C-M7 FakeLLM tests cover pass/fail evidence, premature pass rejection, one repair, secret placeholder allowlisting, and bounded stop conditions.
@@ -36,24 +36,24 @@ The current [official PHPTravels demo page](https://phptravels.com/demo) describ
 | Check | Result |
 |---|---|
 | `ruff check .` | Pass |
-| `pytest -m "not live" -q` | 55 passed, 1 live test deselected |
+| `pytest -m "not live" -q` | 67 passed, 1 live test deselected |
 | `scripts/verify-clean-clone.ps1` | Pass on commit `b9fc14e`; fresh clone installed dependencies and Chromium, linted, ran 55 offline tests, and displayed CLI help |
 | GitHub Actions run | Pass on commit `b9fc14e` |
 | Local FakeLLM browser CLI | Pass; JSON/HTML, trace, and screenshots verified; secret absent from captured outputs |
 | `nlqa doctor` | Pass; Chromium launches and the configured Groq model responds to a one-token ping |
 | PHPTravels customer login | Pass; dashboard welcome assertion proven on `app.phptravels.com` |
 | PHPTravels false-claim case | Expected FAIL; the requested false greeting was absent and the failure was recorded as evidence |
-| PHPTravels London hotel search | Direct browser workflow completed after selecting London and India; the live demo returned its explicit “No Stays found” state. The runner now suppresses the overlapping destination toggle and rejects generic one-word text evidence. A model-driven attempt reached the country dropdown but used the wrong search value; the latest attempt then timed out before any browser action. The case now names the city and country search inputs and requires both the results URL and exact empty-state text; automated PASS remains unverified. No booking or payment was submitted |
+| PHPTravels Dubai hotel search | In Edge, selected Dubai as a destination and India as nationality; the results URL was `/stays/dubai/07-11-2026/08-11-2026/IN/1/2-0` and the page displayed “No Stays found.” This is a direct browser check, not an automated runner PASS. Latest model-driven rerun stopped with Groq `RateLimitError`; no hotel was opened or booked |
 | The Internet practice login | Pass |
-| SauceDemo add-to-cart | Pass; numeric badge assertion proven |
+| SauceDemo add-to-cart | An earlier run showed cart badge `1`. Latest rerun stopped before any browser action with Groq `RateLimitError`, so there is no fresh automated PASS |
 
 ### Live reruns on 2026-11-07
 
 - The current PHPTravels demo page passed a read-only heading check on `https://phptravels.com/demo`; no contact details were entered or submitted.
-- The current PHPTravels hotel search on `https://phptravels.net/stays` remains unproven. Attempts typed the Dubai destination, then encountered changing references, repeated clicks, and time-budget exhaustion before an assertion. No hotel was opened or booked.
+- Edge direct search on `https://phptravels.net/stays` reached `https://phptravels.net/stays/dubai/07-11-2026/08-11-2026/IN/1/2-0` and displayed “No Stays found.” The NLQA runner case is still unproven: prior attempts misselected autocomplete controls, and the latest run hit Groq rate limits before browser actions. No hotel was opened or booked.
 - The Internet example login passed again, using its practice credentials displayed on the page.
-- The SauceDemo cart action added one item; the screenshot showed the cart badge `1`. The first run failed because the model asserted text that the page did not display (`Cart, 1 items`). A corrected attempt encountered retryable model request errors before the assertion completed. This rerun is not recorded as an automated PASS.
-- The newly supplied Groq key passed `nlqa doctor` when the repository `.env` was explicitly loaded. The `.env` remains ignored by Git.
+- An earlier SauceDemo run added one item and showed the cart badge `1`; the latest rerun hit Groq rate limits before any browser action. It is not recorded as a fresh PASS.
+- The Groq key previously passed `nlqa doctor` when the repository `.env` was explicitly loaded. The `.env` remains ignored by Git. Repeated live tests later encountered rate limits; no key was added to the repository or Render.
 
 ## Decisions
 
@@ -61,10 +61,12 @@ The current [official PHPTravels demo page](https://phptravels.com/demo) describ
 - Keep provider SDKs optional for end users and include them in the development extra for adapter tests.
 - Store reports, traces, screenshots, and secret values only in ignored local paths.
 - The clean-clone verification creates its own `.venv` inside the temporary clone so it does not install dependencies into the machine's default Python environment.
+- Bound OpenAI-compatible model requests to two attempts, a 20-second timeout, and a 2-second retry delay cap so rate limits cannot stall one request for minutes.
 
 ## Limitations
 
 - The language model may choose a weak action or assertion; the evidence gate reduces but does not eliminate that risk.
+- Free model-provider rate limits or slow responses can still prevent a live run from finishing, even when the same browser flow works manually.
 - Vague requirements may produce an incomplete extracted spec. Review the expected conditions in each report.
 - No vision, CAPTCHA/MFA bypass, file upload/download, drag-and-drop, or closed-shadow-root support.
 - Arbitrary external sites can change, block automation, or display controls that the snapshot cannot use. Hotel search and shared demo accounts may be flaky.
@@ -73,4 +75,4 @@ The current [official PHPTravels demo page](https://phptravels.com/demo) describ
 ## Submission follow-up
 
 - The user plans to record the required video later; no recording is included in the repository.
-- The PHPTravels login pass used the provided account on `app.phptravels.com`, not credentials generated by the public demo form. The false-claim case records an expected FAIL. The hotel case now selects the required nationality and accepts the site's explicit empty-results state; a model-driven live rerun was blocked by provider timeouts, so its automated PASS remains unverified.
+- The PHPTravels login pass used the provided account on `app.phptravels.com`, not credentials generated by the public demo form. The false-claim case records an expected FAIL. The hotel search was manually verified to return the explicit empty-results state, but the model-driven case remains unverified because recent Groq calls were rate-limited.

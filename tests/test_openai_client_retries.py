@@ -75,3 +75,30 @@ def test_tool_use_failed_stops_after_one_retry(monkeypatch: pytest.MonkeyPatch) 
     with pytest.raises(LLMError, match="usable tool call after retry"):
         client._request(messages=[])
     assert create.call_count == 2
+
+
+def test_retryable_failure_uses_two_attempts_and_caps_server_delay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = OpenAIClient(api_key="test", model="test-model")
+    response = SimpleNamespace(
+        status_code=429,
+        headers={"retry-after": "30"},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+    )
+    error = RateLimitError(
+        "rate limited",
+        response=response,
+        body={"error": {"code": "rate_limit_exceeded"}},
+    )
+    create = Mock(side_effect=[error, error])
+    sleep = Mock()
+    monkeypatch.setattr(client.client.chat.completions, "create", create)
+    monkeypatch.setattr("nlqa.llm.openai_client.time.sleep", sleep)
+
+    with pytest.raises(LLMError, match=r"two retryable attempts \(RateLimitError\)"):
+        client._request(messages=[])
+
+    assert create.call_count == 2
+    assert sleep.call_count == 1
+    assert sleep.call_args.args[0] <= 2

@@ -87,3 +87,35 @@ def test_observation_prefers_visible_input_over_clickable_wrapper(page) -> None:
 
     assert 'input "Search By City"' in joined
     assert "custom control" not in joined
+
+
+def test_observation_prioritizes_form_controls_before_footer_links(page) -> None:
+    page.set_content(
+        '<a href="/social">Social media</a>'
+        '<div style="cursor:pointer;width:260px;height:60px">Destination</div>'
+        '<input placeholder="Search city">'
+        '<button>Search</button>'
+        '<a href="/contact">Contact</a>'
+    )
+
+    snapshot = observe(page)
+    joined = "\n".join(snapshot.lines)
+
+    assert joined.index('input "Search city"') < joined.index('a "Social media"')
+    assert joined.index('div "Destination" custom control') < joined.index('a "Contact"')
+    assert joined.index('button "Search"') < joined.index('a "Social media"')
+
+
+def test_observation_prioritizes_autocomplete_matches_for_focused_input(page) -> None:
+    page.set_content(
+        '<div style="cursor:pointer;width:260px;height:60px">Nationality India</div>'
+        '<input placeholder="Search city" value="Dubai">'
+        '<div style="cursor:pointer;width:260px;height:60px">Dubai Destination</div>'
+        '<div style="cursor:pointer;width:260px;height:60px">Dubai Marina Hotel</div>'
+    )
+    page.get_by_placeholder("Search city").focus()
+
+    snapshot = observe(page)
+
+    assert "Dubai Destination" in snapshot.lines[0]
+    assert "Dubai Marina Hotel" in snapshot.lines[1]
