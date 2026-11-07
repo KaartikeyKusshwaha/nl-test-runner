@@ -91,11 +91,16 @@ def _evaluate_once(
             f"{'visible' if visible else 'absent'}; url={controller.page.url}",
         )
     if name == "assert_url_contains":
-        expected = str(args["substring"])
+        expected = [str(args["substring"]), *map(str, args.get("also_contains", []))]
         actual = controller.page.url
+        missing = [
+            fragment for fragment in expected if fragment.casefold() not in actual.casefold()
+        ]
         return (
-            expected.casefold() in actual.casefold(),
-            f"url={actual}; expected substring={controller.secret_store.mask(expected)!r}",
+            not missing,
+            f"url={actual}; expected substrings="
+            f"{controller.secret_store.mask_object(expected)!r}; "
+            f"missing={controller.secret_store.mask_object(missing)!r}",
         )
 
     observation = observe(controller.page)

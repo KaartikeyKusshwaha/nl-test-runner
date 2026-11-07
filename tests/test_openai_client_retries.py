@@ -103,6 +103,32 @@ def test_long_server_cooldown_stops_without_retry_or_sleep(
     sleep.assert_not_called()
 
 
+def test_ping_preserves_long_server_cooldown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = OpenAIClient(api_key="test", model="test-model")
+    response = SimpleNamespace(
+        status_code=429,
+        headers={"retry-after": "590"},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+    )
+    error = RateLimitError(
+        "rate limited",
+        response=response,
+        body={"error": {"code": "rate_limit_exceeded"}},
+    )
+    create = Mock(side_effect=error)
+    sleep = Mock()
+    monkeypatch.setattr(client.client.chat.completions, "create", create)
+    monkeypatch.setattr("nlqa.llm.openai_client.time.sleep", sleep)
+
+    with pytest.raises(LLMRateLimitError, match="retry in 590 seconds"):
+        client.ping()
+
+    assert create.call_count == 1
+    sleep.assert_not_called()
+
+
 def test_short_server_cooldown_retries_with_bounded_wait(monkeypatch: pytest.MonkeyPatch) -> None:
     client = OpenAIClient(api_key="test", model="test-model")
     response = SimpleNamespace(
@@ -124,3 +150,77 @@ def test_short_server_cooldown_retries_with_bounded_wait(monkeypatch: pytest.Mon
     assert client._request(messages=[]) is success
     assert create.call_count == 2
     sleep.assert_called_once_with(1.0)
+
+
+def test_six_second_server_cooldown_retries_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = OpenAIClient(api_key="test", model="test-model")
+    response = SimpleNamespace(
+        status_code=429,
+        headers={"retry-after": "6"},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+    )
+    error = RateLimitError(
+        "rate limited",
+        response=response,
+        body={"error": {"code": "rate_limit_exceeded"}},
+    )
+    success = SimpleNamespace(usage=None)
+    create = Mock(side_effect=[error, success])
+    sleep = Mock()
+    monkeypatch.setattr(client.client.chat.completions, "create", create)
+    monkeypatch.setattr("nlqa.llm.openai_client.time.sleep", sleep)
+
+    assert client._request(messages=[]) is success
+
+    assert create.call_count == 2
+    sleep.assert_called_once_with(6.0)
+
+
+def test_thirty_three_second_server_cooldown_retries_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = OpenAIClient(api_key="test", model="test-model")
+    response = SimpleNamespace(
+        status_code=429,
+        headers={"retry-after": "33"},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+    )
+    error = RateLimitError(
+        "rate limited",
+        response=response,
+        body={"error": {"code": "rate_limit_exceeded"}},
+    )
+    success = SimpleNamespace(usage=None)
+    create = Mock(side_effect=[error, success])
+    sleep = Mock()
+    monkeypatch.setattr(client.client.chat.completions, "create", create)
+    monkeypatch.setattr("nlqa.llm.openai_client.time.sleep", sleep)
+
+    assert client._request(messages=[]) is success
+
+    assert create.call_count == 2
+    sleep.assert_called_once_with(33.0)
+
+
+def test_explicit_cooldown_over_one_minute_stops_without_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = OpenAIClient(api_key="test", model="test-model")
+    response = SimpleNamespace(
+        status_code=429,
+        headers={"retry-after": "61"},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+    )
+    error = RateLimitError(
+        "rate limited",
+        response=response,
+        body={"error": {"code": "rate_limit_exceeded"}},
+    )
+    create = Mock(side_effect=error)
+    sleep = Mock()
+    monkeypatch.setattr(client.client.chat.completions, "create", create)
+    monkeypatch.setattr("nlqa.llm.openai_client.time.sleep", sleep)
+
+    with pytest.raises(LLMRateLimitError, match="retry in 61 seconds"):
+        client._request(messages=[])
+
+    assert create.call_count == 1
+    sleep.assert_not_called()

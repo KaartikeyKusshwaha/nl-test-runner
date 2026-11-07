@@ -56,9 +56,7 @@ class TestAgent:
         self.judge_enabled = judge_enabled
         self.llm_repair_attempts = llm_repair_attempts
 
-    def run(
-        self, spec: TestSpec, *, allowed_placeholders: set[str] | None = None
-    ) -> RunResult:
+    def run(self, spec: TestSpec, *, allowed_placeholders: set[str] | None = None) -> RunResult:
         """Run until a gated finish, a failing verification, or a bounded stop."""
         started = time.monotonic()
         started_at = datetime.now(UTC).isoformat()
@@ -165,9 +163,7 @@ class TestAgent:
                 continue
 
             if call.name == "wait_for_text":
-                verification_id = _verification_for_waited_text(
-                    spec, str(call.args["text"])
-                )
+                verification_id = _verification_for_waited_text(spec, str(call.args["text"]))
                 if verification_id:
                     call = ToolCall(
                         name="assert_text_visible",
@@ -304,6 +300,25 @@ class TestAgent:
                 decision = evaluate_finish(
                     "fail", "A required browser assertion was not satisfied.", spec, assertions
                 )
+                return self._result(
+                    decision, spec, steps, assertions, started_at, started, observation
+                )
+            if call.name in ASSERTION_TOOLS and all(
+                status == "proven" for status in verification_statuses(spec, assertions).values()
+            ):
+                decision = evaluate_finish(
+                    "pass", "All required browser assertions were proven.", spec, assertions
+                )
+                if decision.outcome is Outcome.PASS and self.judge_enabled:
+                    reviewed = guard_pass(
+                        self.client,
+                        spec,
+                        assertions,
+                        self.secret_store.mask(observation.text),
+                    )
+                    decision.outcome = reviewed.outcome
+                    if reviewed.outcome is Outcome.ERROR:
+                        decision.reason = reviewed.reason
                 return self._result(
                     decision, spec, steps, assertions, started_at, started, observation
                 )

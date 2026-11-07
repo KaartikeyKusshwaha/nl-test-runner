@@ -16,6 +16,7 @@ from nlqa.models import ToolCall
 _RETRY_PART = re.compile(r"(\d+(?:\.\d+)?)(ms|s|m|h|d)", re.IGNORECASE)
 _MAX_ATTEMPTS = 2
 _MAX_RETRY_DELAY_SECONDS = 2.0
+_MAX_SERVER_COOLDOWN_SECONDS = 60.0
 
 
 def _duration_seconds(value: str | None) -> float | None:
@@ -94,13 +95,13 @@ class OpenAIClient:
     def ping(self) -> None:
         """Make the configured provider/model connectivity check with one output token."""
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
+            self._request(
                 messages=[{"role": "user", "content": "Reply with the single digit 1."}],
                 max_completion_tokens=1,
                 temperature=0,
             )
-            self.usage.add(response.usage)
+        except LLMError:
+            raise
         except Exception as exc:
             raise LLMError(f"The provider ping failed ({type(exc).__name__}).") from exc
 
@@ -139,7 +140,7 @@ class OpenAIClient:
             except (RateLimitError, APITimeoutError, APIConnectionError) as exc:
                 if isinstance(exc, RateLimitError):
                     retry_after = _server_retry_after_seconds(exc)
-                    if retry_after is not None and retry_after > _MAX_RETRY_DELAY_SECONDS:
+                    if retry_after is not None and retry_after > _MAX_SERVER_COOLDOWN_SECONDS:
                         raise LLMRateLimitError(retry_after) from exc
                 if attempt == _MAX_ATTEMPTS - 1:
                     if isinstance(exc, RateLimitError):
@@ -149,13 +150,16 @@ class OpenAIClient:
                         f"({type(exc).__name__})."
                     ) from exc
                 delay = (
-                    _server_retry_after_seconds(exc)
-                    if isinstance(exc, RateLimitError)
-                    else None
+                    _server_retry_after_seconds(exc) if isinstance(exc, RateLimitError) else None
+                )
+                max_delay = (
+                    _MAX_SERVER_COOLDOWN_SECONDS if delay is not None else _MAX_RETRY_DELAY_SECONDS
                 )
                 time.sleep(
-                    min(delay if delay is not None else _retry_delay_seconds(exc, attempt),
-                        _MAX_RETRY_DELAY_SECONDS)
+                    min(
+                        delay if delay is not None else _retry_delay_seconds(exc, attempt),
+                        max_delay,
+                    )
                 )
                 continue
             except APIStatusError as exc:
@@ -177,9 +181,7 @@ class OpenAIClient:
                     raise LLMError(
                         f"The model request failed after two attempts (HTTP {last_status})."
                     ) from exc
-                time.sleep(
-                    min(_retry_delay_seconds(exc, attempt), _MAX_RETRY_DELAY_SECONDS)
-                )
+                time.sleep(min(_retry_delay_seconds(exc, attempt), _MAX_RETRY_DELAY_SECONDS))
                 continue
             except Exception as exc:
                 if attempt == _MAX_ATTEMPTS - 1:

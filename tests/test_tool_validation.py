@@ -44,3 +44,23 @@ def test_single_generic_word_is_not_accepted_as_text_evidence() -> None:
 
     assert error is not None
     assert "one-word" in error
+
+
+def test_url_assertion_accepts_distinctive_additional_fragments() -> None:
+    call = ToolCall(
+        name="assert_url_contains",
+        args={
+            "substring": "/stays/dubai/",
+            "also_contains": ["/IN/"],
+            "verification_id": "v1",
+        },
+    )
+
+    assert validate_tool_call(call, observation(), {"v1"}) is None
+
+
+def test_reference_with_display_brackets_is_normalized() -> None:
+    call = ToolCall(name="click", args={"ref": " [e1] "})
+
+    assert validate_tool_call(call, observation(), {"v1"}) is None
+    assert call.args["ref"] == "e1"

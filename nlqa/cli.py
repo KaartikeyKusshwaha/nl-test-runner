@@ -123,6 +123,8 @@ def _doctor() -> int:
             client = create_client(settings)
             client.ping()
             console.print("LLM ping: passed (one output token requested)")
+        except LLMError as exc:
+            console.print(f"[red]LLM ping failed: {exc}[/red]")
         except Exception as exc:
             console.print(
                 f"[red]LLM ping failed ({type(exc).__name__}). "
@@ -267,9 +269,7 @@ def _run_text(
                     max_elements=settings.nlqa_max_elements,
                     judge_enabled=settings.nlqa_judge,
                 )
-                result = agent.run(
-                    spec, allowed_placeholders=set(PLACEHOLDER.findall(text))
-                )
+                result = agent.run(spec, allowed_placeholders=set(PLACEHOLDER.findall(text)))
             except Exception as exc:
                 decision = abort_verdict(f"browser setup failed ({type(exc).__name__})", spec, [])
                 result = RunResult(

@@ -14,7 +14,7 @@ English test -> LLM extracts goal and verifications -> Playwright observes curre
 - A compact page snapshot covers visible controls, open shadow roots, and frames. Password fields are masked.
 - The model proposes one action at a time. The runner validates arguments, uses fresh element references, and bounds time, steps, retries, and navigation.
 - Playwright executes assertions and stores read-back evidence. The model cannot declare a test passed by itself.
-- PASS requires every verification to have a passing assertion. FAIL requires an assertion that did not hold. Missing evidence, blocked execution, or budget exhaustion is ERROR.
+- PASS requires every verification to have a passing assertion. Once all assertions pass, the runner finalizes directly without another model call. FAIL requires an assertion that did not hold. Missing evidence, blocked execution, or budget exhaustion is ERROR.
 - A second model call may downgrade a weakly supported PASS to ERROR; it cannot create a PASS or FAIL.
 
 ## Prerequisites
@@ -65,8 +65,8 @@ OPENAI_API_KEY=<your-Groq-key>
 LLM_BASE_URL=https://api.groq.com/openai/v1
 ```
 
-Free-plan quotas and model availability can change. The client honors provider retry headers and retries one malformed tool response.
-The default free-tier budget limits each observation to 60 interactive elements and each model response to 512 completion tokens. Increase `NLQA_MAX_ELEMENTS` or `NLQA_MAX_TOKENS` in `.env` when a test needs more context or output; provider quotas still apply.
+Free-plan quotas and model availability can change. The client honors explicit `Retry-After` cooldowns up to 60 seconds with one retry; longer cooldowns stop cleanly and report the wait instead of shortening it. A malformed tool response gets one quiet retry.
+The local default budget limits each observation to 60 interactive elements and each model response to 512 completion tokens. The hosted Render instance uses 30 elements per observation to reduce prompt size, keeps the 512-token response budget, and allows runs up to 360 seconds. Increase `NLQA_MAX_ELEMENTS` or `NLQA_MAX_TOKENS` locally when a test needs more context or output; provider quotas still apply.
 
 For other adapters, use `LLM_PROVIDER=anthropic`, or `LLM_PROVIDER=openai_compatible` with `LLM_BASE_URL` and `OPENAI_API_KEY`. Provider libraries are installed by the development extra; a minimum installation can use `pip install -e ".[openai]"` or `pip install -e ".[anthropic]"`.
 

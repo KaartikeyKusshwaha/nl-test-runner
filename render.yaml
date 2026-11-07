@@ -20,10 +20,10 @@ services:
       - key: NLQA_HEADLESS
         value: "true"
       - key: NLQA_MAX_ELEMENTS
-        value: "60"
+        value: "30"
       - key: NLQA_MAX_TOKENS
         value: "512"
       - key: WEB_MAX_SECONDS
-        value: "180"
+        value: "360"
       - key: WEB_MAX_STEPS
         value: "24"

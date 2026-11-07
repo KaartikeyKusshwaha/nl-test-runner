@@ -36,14 +36,17 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "click",
         "description": "Click a current interactive element reference.",
-        "parameters": _object({"ref": _string("Current [eN] or [fN:eN] reference")}, ["ref"]),
+        "parameters": _object(
+            {"ref": _string("Bare reference such as e12 or f1:e4; omit display brackets")},
+            ["ref"],
+        ),
     },
     {
         "name": "type",
         "description": "Type text into a current input reference.",
         "parameters": _object(
             {
-                "ref": _string("Current element reference"),
+                "ref": _string("Bare current reference such as e12 or f1:e4; omit brackets"),
                 "text": _string("Text or {{ENV_VAR}} placeholder"),
                 "clear_first": {"type": "boolean"},
                 "press_enter": {"type": "boolean"},
@@ -126,9 +129,20 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "assert_url_contains",
-        "description": "Record whether the current URL contains a substring.",
+        "description": (
+            "Record whether the current URL contains substring and every optional fragment "
+            "in also_contains. Use also_contains to prove multiple URL parts in one check."
+        ),
         "parameters": _object(
-            {"substring": _string("URL substring"), "verification_id": _string("Verification id")},
+            {
+                "substring": _string("Required URL substring"),
+                "also_contains": {
+                    "type": "array",
+                    "items": _string("Another required URL substring"),
+                    "maxItems": 6,
+                },
+                "verification_id": _string("Verification id"),
+            },
             ["substring", "verification_id"],
         ),
     },
@@ -228,6 +242,15 @@ def validate_tool_call(
         return f"Unexpected argument(s): {', '.join(sorted(unknown))}."
     if missing:
         return f"Missing required argument(s): {', '.join(sorted(missing))}."
+    if "ref" in call.args:
+        ref = call.args["ref"]
+        if isinstance(ref, str):
+            normalized_ref = ref.strip()
+            if normalized_ref.startswith("[") and normalized_ref.endswith("]"):
+                normalized_ref = normalized_ref[1:-1]
+            call.args["ref"] = normalized_ref
+        else:
+            return "Argument 'ref' must be a string reference."
     for key, value in call.args.items():
         spec = properties[key]
         expected_type = spec.get("type")
@@ -253,6 +276,17 @@ def validate_tool_call(
         parsed = urlparse(call.args["url"])
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             return "navigate only accepts absolute http:// or https:// URLs."
+    if call.name == "assert_url_contains":
+        additional = call.args.get("also_contains", [])
+        if not isinstance(additional, list) or len(additional) > 6:
+            return "Argument 'also_contains' must be a list of at most 6 URL fragments."
+        if any(
+            not isinstance(fragment, str)
+            or len(fragment.strip()) < 3
+            or fragment.strip().lower() in {"the", "a", "an", "yes", "no"}
+            for fragment in additional
+        ):
+            return "Every also_contains item must be a distinctive URL fragment."
     if call.name in ASSERTION_TOOLS:
         verification_id = call.args.get("verification_id")
         if verification_id not in verification_ids:

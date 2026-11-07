@@ -64,6 +64,29 @@ def test_text_url_value_and_element_state_assertions(page) -> None:
     assert heading_ref
 
 
+def test_url_assertion_checks_all_requested_fragments(page, site_server: str) -> None:
+    page.goto(site_server)
+    page.evaluate("history.replaceState({}, '', '/stays/dubai/07-11-2026/08-11-2026/IN/1/2-0')")
+    controller = BrowserController(page)
+
+    result = run_assertion(
+        ToolCall(
+            name="assert_url_contains",
+            args={
+                "substring": "/stays/dubai/",
+                "also_contains": ["/IN/"],
+                "verification_id": "v1",
+            },
+        ),
+        controller,
+        step=1,
+        timeout_ms=100,
+    )
+
+    assert result.passed is True
+    assert "missing=[]" in result.detail
+
+
 def test_absent_assertion_must_remain_absent_for_the_window(page) -> None:
     page.set_content(
         "<body><h1>Waiting</h1><script>setTimeout(() => {\n"
@@ -91,9 +114,7 @@ def test_element_text_exact_mode_distinguishes_one_from_ten(page) -> None:
     controller = BrowserController(page)
     snapshot = controller.snapshot()
     cart_ref = next(
-        line.split("]", 1)[0][1:]
-        for line in snapshot.lines
-        if "Cart, 10 items" in line
+        line.split("]", 1)[0][1:] for line in snapshot.lines if "Cart, 10 items" in line
     )
 
     exact_one = run_assertion(

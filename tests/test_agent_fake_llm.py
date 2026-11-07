@@ -94,6 +94,27 @@ def test_expected_dashboard_missing_is_evidence_backed_fail(page, site_server: s
     assert fake.usage.calls == 4  # It stops as soon as the failed assertion proves FAIL.
 
 
+def test_all_proven_verifications_finish_without_an_extra_model_call(page) -> None:
+    page.set_content("<h1>Customer dashboard</h1>")
+    fake = FakeLLM(
+        tool_calls=[
+            ToolCall(
+                name="assert_text_visible",
+                args={"text": "Customer dashboard", "verification_id": "v1"},
+            )
+        ]
+    )
+
+    result = TestAgent(fake, BrowserController(page), judge_enabled=False).run(
+        spec("The customer dashboard is shown")
+    )
+
+    assert result.outcome is Outcome.PASS
+    assert result.verification_status == {"v1": "proven"}
+    assert result.steps[-1].tool == "assert_text_visible"
+    assert fake.usage.calls == 1
+
+
 def test_waiting_for_the_expected_text_records_a_failing_assertion(page) -> None:
     page.set_content("<h1>Public homepage</h1>")
     fake = FakeLLM(
@@ -207,7 +228,6 @@ def test_invalid_tool_gets_one_repair_call(page, site_server: str) -> None:
                 name="assert_text_visible",
                 args={"text": "Sign in", "verification_id": "v1"},
             ),
-            ToolCall(name="finish", args={"verdict": "pass", "reason": "Checked"}),
         ]
     )
     fake = FakeLLM(
@@ -218,7 +238,7 @@ def test_invalid_tool_gets_one_repair_call(page, site_server: str) -> None:
         spec("The sign-in heading is shown")
     )
     assert result.outcome is Outcome.PASS
-    assert fake.usage.calls == 4
+    assert fake.usage.calls == 3
     assert "stale or missing" in fake.prompts[1][1]
 
 
@@ -231,7 +251,6 @@ def test_empty_model_response_is_repaired_once(page, site_server: str) -> None:
                 name="assert_text_visible",
                 args={"text": "Sign in", "verification_id": "v1"},
             ),
-            ToolCall(name="finish", args={"verdict": "pass", "reason": "Checked"}),
         ]
     )
     fake = FakeLLM(
@@ -242,7 +261,7 @@ def test_empty_model_response_is_repaired_once(page, site_server: str) -> None:
         spec("The sign-in heading is shown")
     )
     assert result.outcome is Outcome.PASS
-    assert fake.usage.calls == 4
+    assert fake.usage.calls == 3
     assert "previous tool response was invalid" in fake.prompts[1][1]
 
 
