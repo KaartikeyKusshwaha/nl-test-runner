@@ -29,7 +29,8 @@ English test -> LLM extracts goal and verifications -> Playwright observes curre
 Windows PowerShell:
 
 ```powershell
-py -3.11 -m venv .venv
+py -3 -m venv .venv
+py -3 --version  # confirm the selected runtime is Python 3.11 or later
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -e ".[dev]"

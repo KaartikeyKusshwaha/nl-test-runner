@@ -17,6 +17,7 @@ The spec-extraction prompt requires observable conditions, only accepts URLs pre
 - Checked 2026-11-07 (Asia/Kolkata). Python 3.12.10, isolated `.venv`, Playwright 1.64.1, and managed Chromium are installed.
 - The `.venv` and `.env` are ignored by Git. No API key or password is committed.
 - `ruff check .` passes. Latest offline run: `pytest -m "not live" -q` reports 80 passed, 1 live test deselected.
+- Clean-clone install verification on 2026-11-08 used the README's Windows venv workflow with `py -3` (Python 3.13.14): pip dependencies and Chromium installed, `.env.example` copied, Ruff passed, all 80 offline tests passed, and `nlqa --help` ran. The prior `py -3.11` selector failed on this machine despite an Astral-managed 3.11 runtime, so the README now uses `py -3` and asks users to confirm the selected version.
 - The latest Groq key was accepted by the read-only `/models` endpoint. An inherited shell `OPENAI_API_KEY` overrode the project `.env` and was rejected; removing that shell variable let the runner use the `.env` key. Nothing secret was printed or added to GitHub/Render.
 - PHPTravels' official demo form requests personal/contact details and a security check to generate credentials. I did not submit it or enter real contact details.
 
@@ -29,6 +30,8 @@ The spec-extraction prompt requires observable conditions, only accepts URLs pre
 | Hotel-run final outcome | That live run ended `ERROR` only because Groq returned `Retry-After: 1889` on the extra `finish` request, after both required assertions were proven. The runner now finalizes once all verifications are proven, so `--no-judge` needs no extra model call. The new behavior is covered by an offline regression test; the full live case was not rerun after this change because of the provider cooldown. |
 | PHPTravels demo page | Read-only page check passed; no demo contact form was submitted. |
 | The Internet practice login | A prior live runner pass is recorded. |
+| 2026-11-08 preflight: The Internet | The real Task 2 runner returned the expected PASS and verified `You logged into a secure area!` in 75.9 seconds. |
+| 2026-11-08 preflight: PHPTravels false claim | The first run returned the expected FAIL, but the model clicked page controls before asserting; the required fields were blank and the browser blocked submission. A second attempt rate-limited before the assertion. Do not describe this case as interaction-free in the video. |
 | SauceDemo add-to-cart | Direct Playwright inspection showed the cart change from empty to one. The runner assertion was fixed to compare exact badge text, but a fresh real-model PASS remains unverified because of Groq quota. |
 | Offline browser pipeline | FakeLLM-backed tests cover deterministic PASS/FAIL evidence, finalization, placeholder masking, and reports. |
 | `ruff check .` | Pass |

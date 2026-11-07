@@ -2,26 +2,34 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
 $clonePath = Join-Path $tempRoot ("nl-test-runner-clean-" + [guid]::NewGuid().ToString('N'))
-$pythonPath = (Get-Command python -ErrorAction Stop).Source
-$venvPath = Join-Path $clonePath '.venv\Scripts\python.exe'
+$pythonLauncher = (Get-Command py -ErrorAction Stop).Source
 
 try {
     git clone --no-hardlinks $repositoryRoot $clonePath
     if ($LASTEXITCODE -ne 0) { throw 'git clone failed.' }
     Push-Location $clonePath
     try {
-        & $pythonPath -m venv '.venv'
+        & $pythonLauncher -3 -m venv '.venv'
         if ($LASTEXITCODE -ne 0) { throw 'Clean-clone virtual environment creation failed.' }
-        & $venvPath -m pip install -e '.[dev]'
+        . .\.venv\Scripts\Activate.ps1
+        if ($env:VIRTUAL_ENV -ne (Join-Path $clonePath '.venv')) {
+            throw 'Clean-clone virtual environment activation failed.'
+        }
+        python --version
+        python -m pip install --upgrade pip
+        if ($LASTEXITCODE -ne 0) { throw 'Clean-clone pip upgrade failed.' }
+        pip install -e '.[dev]'
         if ($LASTEXITCODE -ne 0) { throw 'Clean-clone dependency installation failed.' }
-        & $venvPath -m playwright install chromium
+        playwright install chromium
         if ($LASTEXITCODE -ne 0) { throw 'Clean-clone Chromium install failed.' }
-        & $venvPath -m ruff check .
+        Copy-Item '.env.example' '.env'
+        python -m ruff check .
         if ($LASTEXITCODE -ne 0) { throw 'Clean-clone lint failed.' }
-        & $venvPath -m pytest -m 'not live'
+        python -m pytest -m 'not live'
         if ($LASTEXITCODE -ne 0) { throw 'Clean-clone offline tests failed.' }
-        & $venvPath -m nlqa --help
+        nlqa --help
         if ($LASTEXITCODE -ne 0) { throw 'Clean-clone CLI help failed.' }
+        deactivate
     }
     finally { Pop-Location }
     Write-Output 'Clean-clone verification passed.'
