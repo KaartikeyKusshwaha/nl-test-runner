@@ -18,7 +18,7 @@ class AnthropicClient:
 
     provider = "anthropic"
 
-    def __init__(self, *, api_key: str, model: str, max_tokens: int = 1200) -> None:
+    def __init__(self, *, api_key: str, model: str, max_tokens: int = 512) -> None:
         self.model = model
         self.max_tokens = max_tokens
         self.client = Anthropic(api_key=api_key, max_retries=0, timeout=30)

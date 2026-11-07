@@ -65,7 +65,7 @@ class OpenAIClient:
     provider = "openai"
 
     def __init__(
-        self, *, api_key: str, model: str, base_url: str | None = None, max_tokens: int = 1200
+        self, *, api_key: str, model: str, base_url: str | None = None, max_tokens: int = 512
     ) -> None:
         self.model = model
         self.max_tokens = max_tokens

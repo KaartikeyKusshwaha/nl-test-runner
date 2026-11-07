@@ -144,7 +144,7 @@ class BrowserController:
                 locator.press_sequentially(text, timeout=self.timeout_ms)
             # Let autocomplete menus and other input-driven widgets render before
             # the next observation is captured, so the agent can act on fresh options.
-            self.page.wait_for_timeout(1500)
+            self.page.wait_for_timeout(2200)
             if args.get("press_enter", False):
                 locator.press("Enter", timeout=self.timeout_ms)
                 self._bounded_load_wait()

@@ -26,12 +26,12 @@ class Settings(BaseSettings):
     nlqa_headless: bool = True
     nlqa_judge: bool = True
     nlqa_assert_timeout_ms: int = Field(default=5000, ge=100, le=30000)
-    nlqa_max_elements: int = Field(default=150, ge=10, le=500)
+    nlqa_max_elements: int = Field(default=60, ge=10, le=500)
     nlqa_report_dir: str = "reports"
     nlqa_allow_domain: list[str] = Field(default_factory=list)
     nlqa_slowmo_ms: int = Field(default=0, ge=0, le=2000)
     nlqa_max_consecutive_errors: int = Field(default=4, ge=1, le=10)
-    nlqa_max_tokens: int = Field(default=1200, ge=128, le=8192)
+    nlqa_max_tokens: int = Field(default=512, ge=128, le=8192)
 
     @field_validator("llm_model")
     @classmethod

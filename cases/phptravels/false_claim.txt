@@ -1,4 +1,4 @@
 # name: PHPTravels false dashboard claim
 # url: https://phptravels.com/demo
 # expect: fail
-On the official PHPTravels demo page, verify the exact greeting "Welcome back Zebra Unicorn" is visible. This is a deliberate negative check; do not submit the demo form, log in, or leave the page.
+On the official PHPTravels demo page, check whether the exact greeting "Welcome back Zebra Unicorn" is visible. This is a deliberately false claim and the expected result is FAIL. Do not interact with the page: do not type, click, log in, submit the demo form, or navigate away. Use only a text-visibility check for the exact greeting.

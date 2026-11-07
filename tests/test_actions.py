@@ -87,6 +87,35 @@ def test_custom_pointer_control_can_open_its_input(page) -> None:
     assert page.locator("#city").is_visible()
 
 
+def test_type_waits_for_a_delayed_autocomplete_suggestion(page) -> None:
+    page.set_content(
+        """<label for="city">Search By City</label><input id="city">
+        <script>
+        document.querySelector('#city').addEventListener('input', () => {
+          setTimeout(() => {
+            const option = document.createElement('div');
+            option.setAttribute('role', 'option');
+            option.textContent = 'Dubai Destination';
+            document.body.append(option);
+          }, 1700);
+        });
+        </script>"""
+    )
+    controller = BrowserController(page)
+    observation = controller.snapshot()
+
+    controller.perform(
+        ToolCall(
+            name="type",
+            args={"ref": ref_for(observation, "Search By City"), "text": "Dubai"},
+        ),
+        observation,
+        1,
+    )
+
+    assert any("Dubai Destination" in line for line in controller.snapshot().lines)
+
+
 def test_overlay_dismissal_waits_for_close_transition(page) -> None:
     page.set_content(
         """<button id="underlying" onclick="this.dataset.clicked = 'yes'">Stays</button>

@@ -19,6 +19,10 @@ services:
         sync: false
       - key: NLQA_HEADLESS
         value: "true"
+      - key: NLQA_MAX_ELEMENTS
+        value: "60"
+      - key: NLQA_MAX_TOKENS
+        value: "512"
       - key: WEB_MAX_SECONDS
         value: "180"
       - key: WEB_MAX_STEPS

@@ -66,6 +66,7 @@ LLM_BASE_URL=https://api.groq.com/openai/v1
 ```
 
 Free-plan quotas and model availability can change. The client honors provider retry headers and retries one malformed tool response.
+The default free-tier budget limits each observation to 60 interactive elements and each model response to 512 completion tokens. Increase `NLQA_MAX_ELEMENTS` or `NLQA_MAX_TOKENS` in `.env` when a test needs more context or output; provider quotas still apply.
 
 For other adapters, use `LLM_PROVIDER=anthropic`, or `LLM_PROVIDER=openai_compatible` with `LLM_BASE_URL` and `OPENAI_API_KEY`. Provider libraries are installed by the development extra; a minimum installation can use `pip install -e ".[openai]"` or `pip install -e ".[anthropic]"`.
 
