@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 from openai import BadRequestError, RateLimitError
 
-from nlqa.llm.base import LLMError
+from nlqa.llm.base import LLMError, LLMRateLimitError
 from nlqa.llm.openai_client import OpenAIClient, _duration_seconds, _retry_delay_seconds
 
 
@@ -77,13 +77,13 @@ def test_tool_use_failed_stops_after_one_retry(monkeypatch: pytest.MonkeyPatch) 
     assert create.call_count == 2
 
 
-def test_retryable_failure_uses_two_attempts_and_caps_server_delay(
+def test_long_server_cooldown_stops_without_retry_or_sleep(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     client = OpenAIClient(api_key="test", model="test-model")
     response = SimpleNamespace(
         status_code=429,
-        headers={"retry-after": "30"},
+        headers={"retry-after": "481"},
         request=SimpleNamespace(method="POST", url="https://api.example.test"),
     )
     error = RateLimitError(
@@ -91,14 +91,36 @@ def test_retryable_failure_uses_two_attempts_and_caps_server_delay(
         response=response,
         body={"error": {"code": "rate_limit_exceeded"}},
     )
-    create = Mock(side_effect=[error, error])
+    create = Mock(side_effect=[error])
     sleep = Mock()
     monkeypatch.setattr(client.client.chat.completions, "create", create)
     monkeypatch.setattr("nlqa.llm.openai_client.time.sleep", sleep)
 
-    with pytest.raises(LLMError, match=r"two retryable attempts \(RateLimitError\)"):
+    with pytest.raises(LLMRateLimitError, match="retry in 481 seconds"):
         client._request(messages=[])
 
+    assert create.call_count == 1
+    sleep.assert_not_called()
+
+
+def test_short_server_cooldown_retries_with_bounded_wait(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = OpenAIClient(api_key="test", model="test-model")
+    response = SimpleNamespace(
+        status_code=429,
+        headers={"retry-after": "1"},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+    )
+    error = RateLimitError(
+        "rate limited",
+        response=response,
+        body={"error": {"code": "rate_limit_exceeded"}},
+    )
+    success = SimpleNamespace(usage=None)
+    create = Mock(side_effect=[error, success])
+    sleep = Mock()
+    monkeypatch.setattr(client.client.chat.completions, "create", create)
+    monkeypatch.setattr("nlqa.llm.openai_client.time.sleep", sleep)
+
+    assert client._request(messages=[]) is success
     assert create.call_count == 2
-    assert sleep.call_count == 1
-    assert sleep.call_args.args[0] <= 2
+    sleep.assert_called_once_with(1.0)

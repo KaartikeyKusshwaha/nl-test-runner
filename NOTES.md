@@ -55,13 +55,15 @@ The current [official PHPTravels demo page](https://phptravels.com/demo) describ
 - An earlier SauceDemo run added one item and showed the cart badge `1`; the latest rerun hit Groq rate limits before any browser action. It is not recorded as a fresh PASS.
 - The Groq key previously passed `nlqa doctor` when the repository `.env` was explicitly loaded. The `.env` remains ignored by Git. Repeated live tests later encountered rate limits; no key was added to the repository or Render.
 
+- A structured browser-tool request to Groq returned HTTP 429 with `Retry-After: 481` seconds while the provider reported request quota remaining. The client now stops immediately for explicit cooldowns longer than its short retry window, and the agent records a single `model_rate_limited` step instead of repeating the request. Offline regression tests cover both the stop behavior and a short retry window. This is a provider cooldown, not evidence that PHPTravels or SauceDemo passed; those automated live cases still need a fresh run after Groq allows requests again.
+
 ## Decisions
 
 - Keep model and provider selection entirely in configuration; `LLM_MODEL` has no code default.
 - Keep provider SDKs optional for end users and include them in the development extra for adapter tests.
 - Store reports, traces, screenshots, and secret values only in ignored local paths.
 - The clean-clone verification creates its own `.venv` inside the temporary clone so it does not install dependencies into the machine's default Python environment.
-- Bound OpenAI-compatible model requests to two attempts, a 20-second timeout, and a 2-second retry delay cap so rate limits cannot stall one request for minutes.
+- Bound OpenAI-compatible model requests to two attempts and a 20-second timeout. Short provider cooldowns can retry with a two-second cap; explicit longer `Retry-After` cooldowns stop immediately and are reported to the user rather than being shortened.
 
 ## Limitations
 

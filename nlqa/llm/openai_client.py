@@ -10,7 +10,7 @@ from typing import Any
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, RateLimitError
 
-from nlqa.llm.base import LLMError, Usage, openai_tool
+from nlqa.llm.base import LLMError, LLMRateLimitError, Usage, openai_tool
 from nlqa.models import ToolCall
 
 _RETRY_PART = re.compile(r"(\d+(?:\.\d+)?)(ms|s|m|h|d)", re.IGNORECASE)
@@ -50,6 +50,13 @@ def _retry_delay_seconds(exc: Exception, attempt: int) -> float:
     if delays:
         return min(max(max(delays), 0.25), 60.0)
     return min(0.5 * (2**attempt), 8.0)
+
+
+def _server_retry_after_seconds(exc: RateLimitError) -> float | None:
+    """Return the provider's explicit cooldown without shortening it."""
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", {})
+    return _duration_seconds(headers.get("retry-after"))
 
 
 class OpenAIClient:
@@ -130,13 +137,25 @@ class OpenAIClient:
                 self.usage.add(response.usage)
                 return response
             except (RateLimitError, APITimeoutError, APIConnectionError) as exc:
+                if isinstance(exc, RateLimitError):
+                    retry_after = _server_retry_after_seconds(exc)
+                    if retry_after is not None and retry_after > _MAX_RETRY_DELAY_SECONDS:
+                        raise LLMRateLimitError(retry_after) from exc
                 if attempt == _MAX_ATTEMPTS - 1:
+                    if isinstance(exc, RateLimitError):
+                        raise LLMRateLimitError(_server_retry_after_seconds(exc)) from exc
                     raise LLMError(
                         "The model request failed after two retryable attempts "
                         f"({type(exc).__name__})."
                     ) from exc
+                delay = (
+                    _server_retry_after_seconds(exc)
+                    if isinstance(exc, RateLimitError)
+                    else None
+                )
                 time.sleep(
-                    min(_retry_delay_seconds(exc, attempt), _MAX_RETRY_DELAY_SECONDS)
+                    min(delay if delay is not None else _retry_delay_seconds(exc, attempt),
+                        _MAX_RETRY_DELAY_SECONDS)
                 )
                 continue
             except APIStatusError as exc:

@@ -34,6 +34,21 @@ class LLMError(RuntimeError):
     """Safe, provider-neutral model error that never includes a credential."""
 
 
+class LLMRateLimitError(LLMError):
+    """Provider rate limit that should stop a run until its cooldown expires."""
+
+    def __init__(self, retry_after_seconds: float | None = None) -> None:
+        self.retry_after_seconds = retry_after_seconds
+        if retry_after_seconds is None:
+            message = "The model provider rate-limited this request; retry later."
+        else:
+            message = (
+                "The model provider rate-limited this request; retry in "
+                f"{retry_after_seconds:g} seconds."
+            )
+        super().__init__(message)
+
+
 class LLMClient(Protocol):
     """Operations needed by spec extraction, tool selection, and evidence review."""
 

@@ -10,7 +10,7 @@ from typing import Any
 from nlqa.actions import BrowserController, ToolExecutionError
 from nlqa.assertions import run_assertion
 from nlqa.judge import guard_pass
-from nlqa.llm.base import LLMClient, LLMError
+from nlqa.llm.base import LLMClient, LLMError, LLMRateLimitError
 from nlqa.models import (
     AssertionRecord,
     Outcome,
@@ -93,7 +93,25 @@ class TestAgent:
                 max_steps=self.max_steps,
                 page_section=self.secret_store.mask(observation.prompt_section()),
             )
-            call, repair_error = self._choose_valid_call(prompt, observation, spec)
+            try:
+                call, repair_error = self._choose_valid_call(prompt, observation, spec)
+            except LLMRateLimitError as exc:
+                message = self.secret_store.mask(str(exc))
+                steps.append(
+                    self._step(
+                        step_number,
+                        "model_rate_limited",
+                        {},
+                        False,
+                        message,
+                        observation.url,
+                        iteration_started,
+                    )
+                )
+                decision = abort_verdict(message, spec, assertions)
+                return self._result(
+                    decision, spec, steps, assertions, started_at, started, observation
+                )
             if time.monotonic() - started >= self.max_seconds:
                 decision = abort_verdict("time budget exhausted", spec, assertions)
                 return self._result(
@@ -317,6 +335,8 @@ class TestAgent:
                     tools=TOOL_DEFINITIONS,
                 )
             except LLMError as exc:
+                if isinstance(exc, LLMRateLimitError):
+                    raise
                 return None, str(exc)
             if call is None:
                 last_error = "The model returned no usable tool call."

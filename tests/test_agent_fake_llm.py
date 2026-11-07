@@ -1,6 +1,6 @@
 from nlqa.actions import BrowserController
 from nlqa.agent import TestAgent
-from nlqa.llm.base import LLMError
+from nlqa.llm.base import LLMError, LLMRateLimitError
 from nlqa.llm.fake import FakeLLM
 from nlqa.models import Outcome, TestSpec, ToolCall, Verification
 from nlqa.secrets import SecretStore
@@ -295,6 +295,22 @@ def test_consecutive_provider_errors_stop_as_error(page) -> None:
     ).run(spec("The dashboard is shown"))
     assert result.outcome is Outcome.ERROR
     assert "consecutive invalid model responses" in result.reason
+
+
+def test_provider_rate_limit_stops_run_without_repeating_model_call(page) -> None:
+    def rate_limited(_system: str, _user: str):
+        raise LLMRateLimitError(481)
+
+    fake = FakeLLM(tool_calls=rate_limited)
+    result = TestAgent(fake, BrowserController(page), judge_enabled=False).run(
+        spec("The dashboard is shown")
+    )
+
+    assert result.outcome is Outcome.ERROR
+    assert "retry in 481 seconds" in result.reason
+    assert len(result.steps) == 1
+    assert result.steps[0].tool == "model_rate_limited"
+    assert fake.usage.calls == 1
 
 
 def test_repeating_same_action_on_unchanged_page_is_stopped(page) -> None:
