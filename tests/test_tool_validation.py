@@ -19,7 +19,7 @@ def observation() -> Observation:
 def test_numeric_counter_assertions_allow_short_values() -> None:
     call = ToolCall(
         name="assert_element_text",
-        args={"ref": "e1", "contains": "1", "verification_id": "v1"},
+        args={"ref": "e1", "text": "1", "exact": True, "verification_id": "v1"},
     )
 
     assert validate_tool_call(call, observation(), {"v1"}) is None

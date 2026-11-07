@@ -105,12 +105,21 @@ def _evaluate_once(
             visible = locator.is_visible(timeout=500)
             return visible, f"element {args['ref']} visible={visible}"
         if name == "assert_element_text":
-            expected = str(args["contains"])
+            expected = str(args["text"])
             actual = locator.inner_text(timeout=500)
+            normalized_actual = " ".join(actual.split()).casefold()
+            normalized_expected = " ".join(expected.split()).casefold()
+            exact = args.get("exact", False)
+            matched = (
+                normalized_actual == normalized_expected
+                if exact
+                else normalized_expected in normalized_actual
+            )
             return (
-                expected.casefold() in actual.casefold(),
+                matched,
                 f"element text={controller.secret_store.mask(actual[:300])!r}; "
-                f"expected={controller.secret_store.mask(expected)!r}",
+                f"expected={controller.secret_store.mask(expected)!r}; "
+                f"match={'exact' if exact else 'contains'}",
             )
         if name == "assert_element_state":
             expected = str(args["state"])

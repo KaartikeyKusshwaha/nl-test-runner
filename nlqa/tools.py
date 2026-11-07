@@ -145,14 +145,21 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "assert_element_text",
-        "description": "Record whether the referenced element contains text.",
+        "description": (
+            "Record whether the referenced element contains text, or exactly equals it "
+            "when exact is true."
+        ),
         "parameters": _object(
             {
                 "ref": _string("Current element reference"),
-                "contains": _string("Expected text"),
+                "text": _string("Expected element text"),
+                "exact": {
+                    "type": "boolean",
+                    "description": "Require normalized exact equality instead of containment.",
+                },
                 "verification_id": _string("Verification id"),
             },
-            ["ref", "contains", "verification_id"],
+            ["ref", "text", "verification_id"],
         ),
     },
     {

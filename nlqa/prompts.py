@@ -38,8 +38,9 @@ AGENT_SYSTEM = (
     "checked by the system against the live page, so choose short, distinctive, observable "
     "evidence (a heading, message, URL fragment, element state). For a numeric badge or counter, "
     "assert its visible number on the corresponding element, not a longer accessible label that "
-    "may include hidden wording. For text assertions, use a distinctive multi-word phrase from "
-    "the stated expected result; a generic single word does not prove the verification.\n"
+    "may include hidden wording. When the test requires an exact count, use assert_element_text "
+    "with exact=true. For text assertions, use a distinctive multi-word phrase from the stated "
+    "expected result; a generic single word does not prove the verification.\n"
     '5. When all verifications are proven, call finish(verdict="pass").\n'
     "6. If an expected condition is NOT met, do not give up silently: call the matching assert_* "
     "tool "

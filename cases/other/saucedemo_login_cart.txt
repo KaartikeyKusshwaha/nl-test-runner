@@ -1,4 +1,4 @@
 # name: Sauce Demo add first product to cart
 # url: https://www.saucedemo.com/
 # expect: pass
-Log in with the standard practice credentials shown on the page, add the first product to the cart, and verify the cart badge's visible count is exactly "1".
+Log in to the public practice account using {{SAUCEDEMO_USERNAME}} as the username and {{SAUCEDEMO_PASSWORD}} as the password. After the inventory page opens, add the first product to the cart exactly once. Verify the cart badge on the cart control shows exactly "1". Do not open checkout or place an order.

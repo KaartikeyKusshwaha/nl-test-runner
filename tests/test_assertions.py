@@ -84,3 +84,37 @@ def test_absent_assertion_must_remain_absent_for_the_window(page) -> None:
             timeout_ms=500,
         )
         assert result.passed is False
+
+
+def test_element_text_exact_mode_distinguishes_one_from_ten(page) -> None:
+    page.set_content('<button aria-label="Cart, 10 items"><span>10</span></button>')
+    controller = BrowserController(page)
+    snapshot = controller.snapshot()
+    cart_ref = next(
+        line.split("]", 1)[0][1:]
+        for line in snapshot.lines
+        if "Cart, 10 items" in line
+    )
+
+    exact_one = run_assertion(
+        ToolCall(
+            name="assert_element_text",
+            args={"ref": cart_ref, "text": "1", "exact": True, "verification_id": "v1"},
+        ),
+        controller,
+        step=1,
+        timeout_ms=100,
+    )
+    contains_one = run_assertion(
+        ToolCall(
+            name="assert_element_text",
+            args={"ref": cart_ref, "text": "1", "verification_id": "v1"},
+        ),
+        controller,
+        step=2,
+        timeout_ms=100,
+    )
+
+    assert exact_one.passed is False
+    assert contains_one.passed is True
+    assert "match=exact" in exact_one.detail
