@@ -171,7 +171,32 @@ def test_groq_gpt_oss_uses_its_supported_reasoning_option() -> None:
         base_url="https://api.groq.com/openai/v1",
     )
 
-    assert client._reasoning_kwargs() == {"extra_body": {"include_reasoning": False}}
+    assert client._reasoning_kwargs() == {
+        "extra_body": {"include_reasoning": False},
+        "reasoning_effort": "low",
+    }
+
+
+def test_provider_error_includes_safe_failed_generation_reason() -> None:
+    from nlqa.llm.openai_client import _safe_provider_error
+
+    response = SimpleNamespace(
+        status_code=400,
+        headers={},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+    )
+    error = BadRequestError(
+        "rejected",
+        response=response,
+        body={
+            "message": "Failed to generate",
+            "failed_generation": {"reason": "completion hit the output limit"},
+        },
+    )
+
+    assert _safe_provider_error(error) == (
+        "Failed to generate: completion hit the output limit"
+    )
 
 
 def test_openai_requests_do_not_receive_groq_reasoning_options() -> None:

@@ -75,10 +75,19 @@ def _safe_provider_error(exc: APIStatusError) -> str:
         error = body.get("error")
         if isinstance(error, dict):
             message = str(error.get("message") or error.get("code") or "")
+            failed_generation = error.get("failed_generation")
         elif isinstance(error, str):
             message = error
+            failed_generation = body.get("failed_generation")
         else:
             message = str(body.get("message") or body.get("code") or "")
+            failed_generation = body.get("failed_generation")
+        if isinstance(failed_generation, dict):
+            failure_reason = str(failed_generation.get("reason") or "").strip()
+            if failure_reason and failure_reason not in message:
+                message = f"{message}: {failure_reason}" if message else failure_reason
+        elif isinstance(failed_generation, str) and failed_generation.strip():
+            message = f"{message}: {failed_generation.strip()}" if message else failed_generation
     if not message:
         message = str(getattr(exc, "message", ""))
     if message.startswith("Error code:") and response is not None:
@@ -111,7 +120,10 @@ class OpenAIClient:
         """Use the reasoning control supported by the configured Groq model family."""
         if self.base_url and "groq.com" in self.base_url.casefold():
             if self.model.casefold().startswith("openai/gpt-oss-"):
-                return {"extra_body": {"include_reasoning": False}}
+                return {
+                    "extra_body": {"include_reasoning": False},
+                    "reasoning_effort": "low",
+                }
             return {"extra_body": {"reasoning_format": "hidden"}}
         return {}
 
