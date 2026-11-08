@@ -22,6 +22,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, field_validator
 
 from nlqa.startup_errors import startup_failure_reason
+from nlqa.web_summary import verification_details
 
 app = FastAPI(title="Natural Language Browser Test Runner")
 _lock = threading.Lock()
@@ -139,21 +140,7 @@ def _run_job(job_id: str, test_case: str, url: str) -> None:
             report = json.loads(reports[-1].read_text(encoding="utf-8"))
             verifications = report.get("verification_status", {})
             spec = report.get("spec") if isinstance(report.get("spec"), dict) else {}
-            spec_verifications = spec.get("verifications", [])
-            details = []
-            if isinstance(spec_verifications, list) and isinstance(verifications, dict):
-                for verification in spec_verifications:
-                    if not isinstance(verification, dict):
-                        continue
-                    verification_id = str(verification.get("id", ""))
-                    statement = str(verification.get("statement", "")).strip()
-                    if verification_id and statement:
-                        details.append(
-                            {
-                                "statement": statement[:300],
-                                "status": str(verifications.get(verification_id, "unverified")),
-                            }
-                        )
+            details = verification_details(report)
             summary = {
                 "outcome": str(report.get("outcome", "ERROR")).upper(),
                 "reason": str(report.get("reason", "No result reason was recorded."))[:500],

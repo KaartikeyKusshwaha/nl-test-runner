@@ -200,8 +200,17 @@
           list.className = 'checks';
           for (const check of verificationDetails) {
             const item = document.createElement('li');
-            const label = check.status === 'proven' ? 'Verified' : check.status;
-            item.textContent = `${label}: ${check.statement}`;
+            if (check.status === 'proven') {
+              item.textContent = `Verified: ${check.statement}`;
+            } else if (check.status === 'failed') {
+              const evidence = check.evidence
+                ? ` Browser evidence: ${check.evidence}`
+                : '';
+              item.textContent = `Not matched: expected ${check.statement}.${evidence}`;
+            } else {
+              const evidence = check.evidence ? ` Browser evidence: ${check.evidence}` : '';
+              item.textContent = `Could not verify: ${check.statement}.${evidence}`;
+            }
             list.append(item);
           }
           result.append(list);
