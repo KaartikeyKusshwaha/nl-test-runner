@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from nlqa.config import Settings
-from nlqa.llm.anthropic_client import AnthropicClient
 from nlqa.llm.base import LLMClient, LLMError
 from nlqa.llm.fake import FakeLLM
 from nlqa.llm.openai_client import OpenAIClient
@@ -19,6 +18,8 @@ def create_client(settings: Settings, *, fake: FakeLLM | None = None) -> LLMClie
             raise LLMError("Fake provider needs a scripted FakeLLM instance.")
         return fake
     if settings.llm_provider == "anthropic":
+        from nlqa.llm.anthropic_client import AnthropicClient
+
         assert settings.anthropic_api_key is not None
         return AnthropicClient(
             api_key=settings.anthropic_api_key.get_secret_value(),
