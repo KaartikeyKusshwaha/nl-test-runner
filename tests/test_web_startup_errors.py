@@ -68,6 +68,23 @@ def test_startup_error_does_not_return_unrecognized_model_output() -> None:
     assert "private prompt text" not in reason
 
 
+def test_startup_error_shows_safe_unrecognized_cli_diagnostic() -> None:
+    reason = startup_failure_reason(
+        "RESULT: ERROR The model request failed after two attempts (HTTP 503).",
+        "",
+        2,
+    )
+
+    assert "HTTP 503" in reason
+
+
+def test_startup_error_identifies_silent_child_exit() -> None:
+    reason = startup_failure_reason("", "", 2)
+
+    assert "no report or diagnostic output" in reason
+    assert "exit code 2" in reason
+
+
 def test_startup_error_reports_exception_type_without_traceback_contents() -> None:
     reason = startup_failure_reason(
         "",

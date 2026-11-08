@@ -54,7 +54,7 @@ def startup_failure_reason(stdout: str, stderr: str, returncode: int) -> str:
     if "browser setup failed" in detail:
         return "The browser could not start. Check Render logs for its startup error."
     if detail:
-        return "The runner stopped before browser actions. Check Render application logs."
+        return f"The runner stopped before browser actions: {detail[:300]}"
 
     missing_module = re.search(r"No module named ['\"]([^'\"]+)['\"]", output)
     if missing_module:
@@ -81,4 +81,7 @@ def startup_failure_reason(stdout: str, stderr: str, returncode: int) -> str:
             f"The runner exited before producing a report (exit code {returncode}). "
             "Check Render application logs."
         )
-    return "The runner stopped before producing a report. Check Render application logs."
+    return (
+        "The runner produced no report or diagnostic output "
+        f"(exit code {returncode}). Check Render application logs."
+    )
