@@ -31,6 +31,9 @@ def startup_failure_reason(stdout: str, stderr: str, returncode: int) -> str:
             "Wait for its quota window to reset, then retry."
         )
     if "HTTP 400" in detail or "HTTP 404" in detail:
+        provider_detail = detail.split(":", 1)
+        if len(provider_detail) > 1:
+            return f"The AI provider rejected the request: {provider_detail[1].strip()[:260]}"
         return "The AI provider rejected the model request. Check LLM_MODEL and provider settings."
     if "invalid json" in detail.casefold():
         return (

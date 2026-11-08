@@ -17,6 +17,7 @@ _RETRY_PART = re.compile(r"(\d+(?:\.\d+)?)(ms|s|m|h|d)", re.IGNORECASE)
 _MAX_ATTEMPTS = 2
 _MAX_RETRY_DELAY_SECONDS = 2.0
 _MAX_SERVER_COOLDOWN_SECONDS = 60.0
+_API_KEY_PATTERN = re.compile(r"(?i)(?:gsk_|sk-)[A-Za-z0-9_-]{12,}")
 
 
 def _duration_seconds(value: str | None) -> float | None:
@@ -58,6 +59,23 @@ def _server_retry_after_seconds(exc: RateLimitError) -> float | None:
     response = getattr(exc, "response", None)
     headers = getattr(response, "headers", {})
     return _duration_seconds(headers.get("retry-after"))
+
+
+def _safe_provider_error(exc: APIStatusError) -> str:
+    """Extract a short provider hint while removing key-shaped strings."""
+    body = getattr(exc, "body", None)
+    message = ""
+    if isinstance(body, dict):
+        error = body.get("error")
+        if isinstance(error, dict):
+            message = str(error.get("message") or error.get("code") or "")
+        elif isinstance(error, str):
+            message = error
+    if not message:
+        message = str(getattr(exc, "message", ""))
+    message = " ".join(message.split())
+    message = _API_KEY_PATTERN.sub("[redacted]", message)
+    return message[:240]
 
 
 class OpenAIClient:
@@ -187,9 +205,10 @@ class OpenAIClient:
                     time.sleep(0.25)
                     continue
                 if exc.status_code < 500 and exc.status_code != 429:
+                    hint = _safe_provider_error(exc)
+                    suffix = f": {hint}" if hint else ""
                     raise LLMError(
-                        f"The model rejected the request (HTTP {exc.status_code}). "
-                        "Check provider configuration."
+                        f"The model rejected the request (HTTP {exc.status_code}){suffix}."
                     ) from exc
                 if attempt == _MAX_ATTEMPTS - 1:
                     raise LLMError(

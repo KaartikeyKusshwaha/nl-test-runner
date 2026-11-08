@@ -101,6 +101,25 @@ def test_complete_json_uses_json_response_mode(monkeypatch: pytest.MonkeyPatch) 
     assert "JSON SCHEMA" in kwargs["messages"][1]["content"]
 
 
+def test_provider_error_hint_is_safe_and_specific() -> None:
+    from nlqa.llm.openai_client import _safe_provider_error
+
+    response = SimpleNamespace(
+        status_code=400,
+        headers={},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+    )
+    error = BadRequestError(
+        "rejected",
+        response=response,
+        body={"error": {"message": "Unsupported reasoning_format for gsk_1234567890abcdef"}},
+    )
+
+    hint = _safe_provider_error(error)
+    assert "Unsupported reasoning_format" in hint
+    assert "gsk_" not in hint
+
+
 def test_groq_tool_calls_hide_reasoning() -> None:
     client = OpenAIClient(
         api_key="test", model="test-model", base_url="https://api.groq.com/openai/v1"

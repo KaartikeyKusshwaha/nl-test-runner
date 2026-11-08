@@ -78,6 +78,17 @@ def test_startup_error_shows_safe_unrecognized_cli_diagnostic() -> None:
     assert "HTTP 503" in reason
 
 
+def test_startup_error_preserves_provider_rejection_hint() -> None:
+    reason = startup_failure_reason(
+        "RESULT: ERROR The model rejected the request (HTTP 400): "
+        "response_format is not supported.",
+        "",
+        2,
+    )
+
+    assert "response_format is not supported" in reason
+
+
 def test_startup_error_identifies_silent_child_exit() -> None:
     reason = startup_failure_reason("", "", 2)
 
