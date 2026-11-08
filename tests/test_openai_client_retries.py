@@ -78,7 +78,9 @@ def test_tool_use_failed_stops_after_one_retry(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_complete_json_uses_json_response_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    client = OpenAIClient(api_key="test", model="test-model")
+    client = OpenAIClient(
+        api_key="test", model="test-model", base_url="https://api.groq.com/openai/v1"
+    )
     response = SimpleNamespace(
         choices=[SimpleNamespace(message=SimpleNamespace(content='{"goal":"Check the heading"}'))]
     )
@@ -93,8 +95,23 @@ def test_complete_json_uses_json_response_mode(monkeypatch: pytest.MonkeyPatch) 
 
     kwargs = request.call_args.kwargs
     assert kwargs["response_format"] == {"type": "json_object"}
+    assert kwargs["reasoning_format"] == "hidden"
     assert "tools" not in kwargs
     assert "JSON SCHEMA" in kwargs["messages"][1]["content"]
+
+
+def test_groq_tool_calls_hide_reasoning() -> None:
+    client = OpenAIClient(
+        api_key="test", model="test-model", base_url="https://api.groq.com/openai/v1"
+    )
+
+    assert client._reasoning_kwargs() == {"reasoning_format": "hidden"}
+
+
+def test_openai_requests_do_not_receive_groq_reasoning_options() -> None:
+    client = OpenAIClient(api_key="test", model="test-model")
+
+    assert client._reasoning_kwargs() == {}
 
 
 def test_long_server_cooldown_stops_without_retry_or_sleep(

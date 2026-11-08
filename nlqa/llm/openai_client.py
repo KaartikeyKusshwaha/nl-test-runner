@@ -70,8 +70,15 @@ class OpenAIClient:
     ) -> None:
         self.model = model
         self.max_tokens = max_tokens
+        self.base_url = base_url
         self.client = OpenAI(api_key=api_key, base_url=base_url, max_retries=0, timeout=20)
         self.usage = Usage()
+
+    def _reasoning_kwargs(self) -> dict[str, str]:
+        """Hide GPT-OSS reasoning when calling Groq in JSON or tool mode."""
+        if self.base_url and "groq.com" in self.base_url.casefold():
+            return {"reasoning_format": "hidden"}
+        return {}
 
     def choose_tool(
         self, *, system: str, user: str, tools: list[dict[str, Any]]
@@ -80,6 +87,7 @@ class OpenAIClient:
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
             tools=[openai_tool(tool) for tool in tools],
             tool_choice="required",
+            **self._reasoning_kwargs(),
             temperature=0,
             max_completion_tokens=self.max_tokens,
         )
@@ -122,6 +130,7 @@ class OpenAIClient:
                 },
             ],
             response_format={"type": "json_object"},
+            **self._reasoning_kwargs(),
             temperature=0,
             max_completion_tokens=self.max_tokens,
         )
