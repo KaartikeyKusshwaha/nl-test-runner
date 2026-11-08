@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -77,7 +78,14 @@ def redact_trace(path: str | Path, secrets: set[str]) -> None:
                     for secret in replacements:
                         data = data.replace(secret, b"****")
                 target.writestr(entry, data)
-        temp_path.replace(trace)
+        for attempt in range(8):
+            try:
+                temp_path.replace(trace)
+                break
+            except PermissionError:
+                if attempt == 7:
+                    raise
+                time.sleep(min(0.2 * (2**attempt), 2.0))
     finally:
         if temp_path.exists():
             temp_path.unlink()

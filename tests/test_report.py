@@ -3,6 +3,7 @@ import zipfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import nlqa.report as report_module
 from nlqa.models import Outcome, RunResult, TestSpec, Verification
 from nlqa.report import redact_trace, write_report
 
@@ -34,13 +35,26 @@ def test_report_writes_json_and_autoescaped_html() -> None:
         assert "report_json" in result.artifacts
 
 
-def test_trace_redactor_masks_known_values() -> None:
+def test_trace_redactor_masks_known_values(monkeypatch) -> None:
     with TemporaryDirectory(dir=".", prefix="trace-test-") as directory:
         trace = Path(directory) / "trace.zip"
         with zipfile.ZipFile(trace, "w") as archive:
             archive.writestr("trace.trace", '{"typed":"secret-password"}')
+        original_replace = Path.replace
+        attempts = 0
+
+        def replace_with_one_temporary_lock(source: Path, target: Path) -> Path:
+            nonlocal attempts
+            if source.name == "trace.redacted.zip" and attempts == 0:
+                attempts += 1
+                raise PermissionError("temporary Windows file lock")
+            return original_replace(source, target)
+
+        monkeypatch.setattr(Path, "replace", replace_with_one_temporary_lock)
+        monkeypatch.setattr(report_module.time, "sleep", lambda _seconds: None)
         redact_trace(trace, {"secret-password"})
         with zipfile.ZipFile(trace) as archive:
             content = archive.read("trace.trace").decode()
         assert "secret-password" not in content
         assert "****" in content
+        assert attempts == 1
