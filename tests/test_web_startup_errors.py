@@ -24,6 +24,17 @@ def test_startup_error_identifies_invalid_model_configuration() -> None:
     assert "model request" in reason
 
 
+def test_startup_error_explains_unusable_test_instruction() -> None:
+    reason = startup_failure_reason(
+        "RESULT: ERROR The model did not return a usable tool call after retry.",
+        "",
+        2,
+    )
+
+    assert "complete sentence" in reason
+    assert "balanced quotation marks" in reason
+
+
 def test_startup_error_does_not_return_unrecognized_model_output() -> None:
     reason = startup_failure_reason(
         "RESULT: ERROR The model returned an invalid test specification (ValidationError).",

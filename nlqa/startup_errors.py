@@ -30,6 +30,11 @@ def startup_failure_reason(stdout: str, stderr: str, returncode: int) -> str:
         )
     if "HTTP 400" in detail or "HTTP 404" in detail:
         return "The AI provider rejected the model request. Check LLM_MODEL and provider settings."
+    if "did not return a usable tool call" in detail:
+        return (
+            "The AI could not turn this instruction into a test plan. "
+            "Use a complete sentence, balanced quotation marks, and a clear expected result."
+        )
     if "No start URL was provided" in detail:
         return "The test has no website URL. Enter a public URL in the Website URL field."
     if "did not return the required JSON" in detail or "invalid test specification" in detail:
