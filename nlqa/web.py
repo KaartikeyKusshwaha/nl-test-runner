@@ -21,6 +21,8 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, field_validator
 
+from nlqa.startup_errors import startup_failure_reason
+
 app = FastAPI(title="Natural Language Browser Test Runner")
 _lock = threading.Lock()
 _jobs: dict[str, dict[str, Any]] = {}
@@ -148,7 +150,9 @@ def _run_job(job_id: str, test_case: str, url: str) -> None:
         else:
             summary = {
                 "outcome": "ERROR",
-                "reason": "No report was produced. Check the model settings and server logs.",
+                "reason": startup_failure_reason(
+                    completed.stdout, completed.stderr, completed.returncode
+                ),
                 "duration_ms": 0,
                 "step_count": 0,
                 "verification_status": {},
