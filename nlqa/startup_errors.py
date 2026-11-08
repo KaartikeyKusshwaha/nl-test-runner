@@ -38,6 +38,27 @@ def startup_failure_reason(stdout: str, stderr: str, returncode: int) -> str:
         return "The browser could not start. Check Render logs for its startup error."
     if detail:
         return "The runner stopped before browser actions. Check Render application logs."
+
+    missing_module = re.search(r"No module named ['\"]([^'\"]+)['\"]", output)
+    if missing_module:
+        return f"The hosted runner is missing its {missing_module.group(1)} Python dependency."
+    if re.search(r"^usage:", output, re.IGNORECASE | re.MULTILINE):
+        return "The hosted runner rejected its command arguments before browser startup."
+    if "Traceback (most recent call last)" in output:
+        last_line = next(
+            (line.strip() for line in reversed(output.splitlines()) if line.strip()), ""
+        )
+        exception = re.match(r"([A-Za-z_][A-Za-z0-9_.]*)", last_line)
+        if exception:
+            return (
+                "The hosted runner crashed before producing a report "
+                f"({exception.group(1)}). Check Render application logs."
+            )
+    if stdout or stderr:
+        return (
+            "The hosted runner exited before producing a report "
+            f"(exit code {returncode}; output captured). Check Render application logs."
+        )
     if returncode not in {0, 1, 2}:
         return (
             f"The runner exited before producing a report (exit code {returncode}). "

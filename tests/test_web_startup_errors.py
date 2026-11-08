@@ -33,3 +33,14 @@ def test_startup_error_does_not_return_unrecognized_model_output() -> None:
 
     assert "valid test plan" in reason
     assert "private prompt text" not in reason
+
+
+def test_startup_error_reports_exception_type_without_traceback_contents() -> None:
+    reason = startup_failure_reason(
+        "",
+        "Traceback (most recent call last):\n  secret-bearing details\nRuntimeError: private value",
+        1,
+    )
+
+    assert "RuntimeError" in reason
+    assert "private value" not in reason
