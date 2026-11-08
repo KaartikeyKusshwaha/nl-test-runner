@@ -135,6 +135,23 @@ def test_provider_error_hint_reads_json_from_http_response() -> None:
     assert _safe_provider_error(error) == "reasoning_format is unsupported"
 
 
+def test_provider_error_hint_reads_sdk_flattened_error_body() -> None:
+    from nlqa.llm.openai_client import _safe_provider_error
+
+    response = SimpleNamespace(
+        status_code=400,
+        headers={},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+    )
+    error = BadRequestError(
+        "Error code: 400 -",
+        response=response,
+        body={"message": "include_reasoning is unsupported", "code": "invalid_request"},
+    )
+
+    assert _safe_provider_error(error) == "include_reasoning is unsupported"
+
+
 def test_groq_tool_calls_hide_reasoning() -> None:
     client = OpenAIClient(
         api_key="test", model="test-model", base_url="https://api.groq.com/openai/v1"

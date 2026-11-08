@@ -77,6 +77,8 @@ def _safe_provider_error(exc: APIStatusError) -> str:
             message = str(error.get("message") or error.get("code") or "")
         elif isinstance(error, str):
             message = error
+        else:
+            message = str(body.get("message") or body.get("code") or "")
     if not message:
         message = str(getattr(exc, "message", ""))
     if message.startswith("Error code:") and response is not None:
