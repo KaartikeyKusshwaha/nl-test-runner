@@ -64,6 +64,12 @@ def _server_retry_after_seconds(exc: RateLimitError) -> float | None:
 def _safe_provider_error(exc: APIStatusError) -> str:
     """Extract a short provider hint while removing key-shaped strings."""
     body = getattr(exc, "body", None)
+    response = getattr(exc, "response", None)
+    if not isinstance(body, dict) and response is not None:
+        try:
+            body = response.json()
+        except Exception:
+            body = None
     message = ""
     if isinstance(body, dict):
         error = body.get("error")
@@ -73,6 +79,13 @@ def _safe_provider_error(exc: APIStatusError) -> str:
             message = error
     if not message:
         message = str(getattr(exc, "message", ""))
+    if message.startswith("Error code:") and response is not None:
+        try:
+            text = str(response.text).strip()
+        except Exception:
+            text = ""
+        if text:
+            message = text
     message = " ".join(message.split())
     message = _API_KEY_PATTERN.sub("[redacted]", message)
     return message[:240]

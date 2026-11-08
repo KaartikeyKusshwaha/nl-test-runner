@@ -120,6 +120,21 @@ def test_provider_error_hint_is_safe_and_specific() -> None:
     assert "gsk_" not in hint
 
 
+def test_provider_error_hint_reads_json_from_http_response() -> None:
+    from nlqa.llm.openai_client import _safe_provider_error
+
+    response = SimpleNamespace(
+        status_code=400,
+        headers={},
+        request=SimpleNamespace(method="POST", url="https://api.example.test"),
+        json=lambda: {"error": {"message": "reasoning_format is unsupported"}},
+        text='{"error":{"message":"reasoning_format is unsupported"}}',
+    )
+    error = BadRequestError("Error code: 400 -", response=response, body=None)
+
+    assert _safe_provider_error(error) == "reasoning_format is unsupported"
+
+
 def test_groq_tool_calls_hide_reasoning() -> None:
     client = OpenAIClient(
         api_key="test", model="test-model", base_url="https://api.groq.com/openai/v1"
