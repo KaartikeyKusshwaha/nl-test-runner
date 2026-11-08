@@ -1,3 +1,4 @@
+import inspect
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -95,7 +96,7 @@ def test_complete_json_uses_json_response_mode(monkeypatch: pytest.MonkeyPatch) 
 
     kwargs = request.call_args.kwargs
     assert kwargs["response_format"] == {"type": "json_object"}
-    assert kwargs["reasoning_format"] == "hidden"
+    assert kwargs["extra_body"] == {"reasoning_format": "hidden"}
     assert "tools" not in kwargs
     assert "JSON SCHEMA" in kwargs["messages"][1]["content"]
 
@@ -105,7 +106,11 @@ def test_groq_tool_calls_hide_reasoning() -> None:
         api_key="test", model="test-model", base_url="https://api.groq.com/openai/v1"
     )
 
-    assert client._reasoning_kwargs() == {"reasoning_format": "hidden"}
+    assert client._reasoning_kwargs() == {"extra_body": {"reasoning_format": "hidden"}}
+
+    parameters = inspect.signature(client.client.chat.completions.create).parameters
+    assert "extra_body" in parameters
+    assert "reasoning_format" not in parameters
 
 
 def test_openai_requests_do_not_receive_groq_reasoning_options() -> None:

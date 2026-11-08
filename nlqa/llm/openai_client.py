@@ -74,10 +74,10 @@ class OpenAIClient:
         self.client = OpenAI(api_key=api_key, base_url=base_url, max_retries=0, timeout=20)
         self.usage = Usage()
 
-    def _reasoning_kwargs(self) -> dict[str, str]:
-        """Hide GPT-OSS reasoning when calling Groq in JSON or tool mode."""
+    def _reasoning_kwargs(self) -> dict[str, Any]:
+        """Hide GPT-OSS reasoning using the SDK's supported arbitrary-body option."""
         if self.base_url and "groq.com" in self.base_url.casefold():
-            return {"reasoning_format": "hidden"}
+            return {"extra_body": {"reasoning_format": "hidden"}}
         return {}
 
     def choose_tool(
