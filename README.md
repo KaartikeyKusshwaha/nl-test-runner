@@ -33,7 +33,7 @@ py -3 -m venv .venv
 py -3 --version  # confirm the selected runtime is Python 3.11 or later
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install -e ".[dev]"
+pip install -e ".[dev,web]"
 playwright install chromium
 Copy-Item .env.example .env
 ```
@@ -44,7 +44,7 @@ macOS/Linux:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install -e ".[dev]"
+pip install -e ".[dev,web]"
 playwright install chromium
 cp .env.example .env
 ```
@@ -154,7 +154,7 @@ PHPTravels account credentials and the customer/storefront URLs are configured v
 
 ## Development without an API key
 
-Offline tests use local mini-sites and `FakeLLM`:
+Offline tests use local mini-sites and `FakeLLM`. Install the development and web extras first with `pip install -e ".[dev,web]"`:
 
 ```bash
 pytest -m "not live"

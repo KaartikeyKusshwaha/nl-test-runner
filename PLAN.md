@@ -1140,7 +1140,7 @@ Mini-sites live in `tests/sites/` and are served with `http.server` on a free po
 
 ## C18. CI (`.github/workflows/ci.yml`)
 
-`ubuntu-latest`, `actions/setup-python` 3.11, `pip install -e ".[dev]"`, `playwright install --with-deps chromium`, `ruff check .`, `pytest -m "not live"`. Upload `reports/` on failure.
+`ubuntu-latest`, `actions/setup-python` 3.11, `pip install -e ".[dev,web]"`, `playwright install --with-deps chromium`, `ruff check .`, `pytest -m "not live"`. Upload `reports/` on failure.
 
 ## C19. Milestones (Repo 2)
 
@@ -1354,7 +1354,7 @@ NLQA_JUDGE=true
 set -euo pipefail
 TMP="$(mktemp -d)"; git clone . "$TMP/repo"; cd "$TMP/repo"
 # Task 1:  dotnet build -warnaserror && dotnet test --filter "Category!=Live"
-# Task 2:  python -m venv .venv && . .venv/bin/activate && pip install -e ".[dev]" \
+# Task 2:  python -m venv .venv && . .venv/bin/activate && pip install -e ".[dev,web]" \
 #          && playwright install chromium && ruff check . && pytest -m "not live"
 echo "Clean-clone verification passed in $TMP/repo"
 ```

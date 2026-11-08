@@ -18,7 +18,7 @@ try {
         python --version
         python -m pip install --upgrade pip
         if ($LASTEXITCODE -ne 0) { throw 'Clean-clone pip upgrade failed.' }
-        pip install -e '.[dev]'
+        pip install -e '.[dev,web]'
         if ($LASTEXITCODE -ne 0) { throw 'Clean-clone dependency installation failed.' }
         playwright install chromium
         if ($LASTEXITCODE -ne 0) { throw 'Clean-clone Chromium install failed.' }

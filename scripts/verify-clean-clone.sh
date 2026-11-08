@@ -8,7 +8,7 @@ cd "$TMP/repo"
 python -m venv .venv
 PY=".venv/bin/python"
 if [[ -x ".venv/Scripts/python.exe" ]]; then PY=".venv/Scripts/python.exe"; fi
-"$PY" -m pip install -e ".[dev]"
+"$PY" -m pip install -e ".[dev,web]"
 "$PY" -m playwright install chromium
 "$PY" -m ruff check .
 "$PY" -m pytest -m "not live"
