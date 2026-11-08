@@ -192,17 +192,32 @@
         meta.className = 'help';
         meta.textContent = `${summary.step_count || 0} browser actions · ${Math.round((summary.duration_ms || 0) / 1000)} seconds`;
         result.append(heading, detail, meta);
-        const checks = summary.verification_status || {};
-        const entries = Object.entries(checks);
-        if (entries.length) {
+        const verificationDetails = Array.isArray(summary.verification_details)
+          ? summary.verification_details
+          : [];
+        if (verificationDetails.length) {
           const list = document.createElement('ul');
           list.className = 'checks';
-          for (const [name, status] of entries) {
+          for (const check of verificationDetails) {
             const item = document.createElement('li');
-            item.textContent = `${name}: ${status}`;
+            const label = check.status === 'proven' ? 'Verified' : check.status;
+            item.textContent = `${label}: ${check.statement}`;
             list.append(item);
           }
           result.append(list);
+        } else {
+          const checks = summary.verification_status || {};
+          const entries = Object.entries(checks);
+          if (entries.length) {
+            const list = document.createElement('ul');
+            list.className = 'checks';
+            for (const [name, status] of entries) {
+              const item = document.createElement('li');
+              item.textContent = `${name}: ${status}`;
+              list.append(item);
+            }
+            result.append(list);
+          }
         }
       }
 

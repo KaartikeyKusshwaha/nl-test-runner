@@ -138,12 +138,30 @@ def _run_job(job_id: str, test_case: str, url: str) -> None:
 
             report = json.loads(reports[-1].read_text(encoding="utf-8"))
             verifications = report.get("verification_status", {})
+            spec = report.get("spec") if isinstance(report.get("spec"), dict) else {}
+            spec_verifications = spec.get("verifications", [])
+            details = []
+            if isinstance(spec_verifications, list) and isinstance(verifications, dict):
+                for verification in spec_verifications:
+                    if not isinstance(verification, dict):
+                        continue
+                    verification_id = str(verification.get("id", ""))
+                    statement = str(verification.get("statement", "")).strip()
+                    if verification_id and statement:
+                        details.append(
+                            {
+                                "statement": statement[:300],
+                                "status": str(verifications.get(verification_id, "unverified")),
+                            }
+                        )
             summary = {
                 "outcome": str(report.get("outcome", "ERROR")).upper(),
                 "reason": str(report.get("reason", "No result reason was recorded."))[:500],
                 "duration_ms": max(0, int(report.get("duration_ms", 0))),
                 "step_count": len(report.get("steps") or []),
                 "verification_status": verifications if isinstance(verifications, dict) else {},
+                "verification_details": details,
+                "goal": str(spec.get("goal", ""))[:300],
             }
             if completed.returncode not in {0, 1, 2}:
                 summary["notice"] = "The runner process exited unexpectedly; see server logs."
