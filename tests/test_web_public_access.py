@@ -16,6 +16,12 @@ def _configure_public_run(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(web, "_executor", SimpleNamespace(submit=lambda *_args: None))
 
 
+def test_health_reports_deployed_revision(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "1234567890abcdef")
+
+    assert web.health() == {"status": "ok", "revision": "1234567890ab"}
+
+
 def test_web_run_and_poll_work_without_an_access_code(monkeypatch: pytest.MonkeyPatch) -> None:
     _configure_public_run(monkeypatch)
     request = Request(

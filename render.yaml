@@ -3,6 +3,7 @@ services:
     name: nl-test-runner
     runtime: docker
     plan: free
+    autoDeployTrigger: commit
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /health

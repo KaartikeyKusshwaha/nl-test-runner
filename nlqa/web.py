@@ -179,7 +179,7 @@ def home() -> str:
 @app.get("/health")
 def health() -> dict[str, str]:
     """Render health check; does not spend model quota."""
-    return {"status": "ok"}
+    return {"status": "ok", "revision": os.environ.get("RENDER_GIT_COMMIT", "local")[:12]}
 
 
 @app.post("/api/runs", status_code=202)
