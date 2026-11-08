@@ -24,12 +24,25 @@ from nlqa.llm.base import LLMError
 from nlqa.llm.factory import create_client
 from nlqa.llm.fake import FakeLLM
 from nlqa.models import Outcome, RunResult
+from nlqa.network_safety import validate_public_http_url
 from nlqa.report import create_run_directory, redact_trace, write_report
 from nlqa.secrets import PLACEHOLDER, SecretStore
 from nlqa.spec_extractor import SpecExtractionError, extract_spec
 from nlqa.verdict import abort_verdict
 
 console = Console()
+
+
+def _guard_public_request(route: Any) -> None:
+    """Block browser requests that target private or local hosts in hosted runs."""
+    target = route.request.url
+    if target.startswith(("http://", "https://")):
+        try:
+            validate_public_http_url(target)
+        except ValueError:
+            route.abort("blockedbyclient")
+            return
+    route.continue_()
 
 
 @dataclass(slots=True)
@@ -241,6 +254,9 @@ def _run_text(
                 context_options["record_video_dir"] = str(video_dir)
                 context_options["record_video_size"] = {"width": 1366, "height": 900}
             context = browser.new_context(**context_options)
+            public_only = os.environ.get("NLQA_PUBLIC_ONLY", "").casefold() == "true"
+            if public_only:
+                context.route("**/*", _guard_public_request)
             context.tracing.start(screenshots=True, snapshots=True, sources=False)
             page = context.new_page()
             controller = BrowserController(
@@ -248,6 +264,7 @@ def _run_text(
                 report_dir=run_dir,
                 secret_store=secret_store,
                 allow_domains=settings.nlqa_allow_domain,
+                public_only=public_only,
                 timeout_ms=settings.nlqa_action_timeout_ms,
             )
             try:

@@ -35,6 +35,11 @@ def startup_failure_reason(stdout: str, stderr: str, returncode: int) -> str:
             "The AI could not turn this instruction into a test plan. "
             "Use a complete sentence, balanced quotation marks, and a clear expected result."
         )
+    if "did not identify a result to check" in detail:
+        return (
+            "The AI understood the actions but could not identify what result to verify. "
+            "Add the expected visible outcome to the test instruction."
+        )
     if "No start URL was provided" in detail:
         return "The test has no website URL. Enter a public URL in the Website URL field."
     if "did not return the required JSON" in detail or "invalid test specification" in detail:

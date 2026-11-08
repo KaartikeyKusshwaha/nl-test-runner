@@ -88,7 +88,6 @@
       }
       .primary:hover { background: #174bbd; }
       .primary:disabled { opacity: .62; cursor: wait; }
-      .example { border: 0; padding: 8px 0; background: transparent; color: var(--blue); font: inherit; font-weight: 700; cursor: pointer; }
       .result { min-height: 58px; margin-top: 22px; padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: #f8faff; color: var(--muted); }
       .result-title { margin: 0 0 5px; color: var(--ink); font-size: 15px; font-weight: 800; }
       .result-body { margin: 0; font-size: 14px; }
@@ -124,24 +123,18 @@
         <form id="run-form">
           <div class="formgrid">
             <div class="field wide">
-              <label for="token">Private access code</label>
-              <input id="token" type="password" autocomplete="off" placeholder="Enter the code provided by the app owner" required>
-              <span class="help">Protects the hosted model account. It is sent only to this app, never to the test website or AI model.</span>
-            </div>
-            <div class="field wide">
               <label for="url">Website URL</label>
-              <input id="url" type="url" placeholder="https://example.com" maxlength="2048" required>
-              <span class="help">Use a public HTTP or HTTPS address. Do not include a username or password in the URL.</span>
+              <input id="url" type="url" placeholder="Paste the public website URL to test" maxlength="2048" required>
+              <span class="help">Use any public HTTP or HTTPS website you are authorized to test.</span>
             </div>
             <div class="field wide">
               <label for="test">Test case</label>
-              <textarea id="test" maxlength="3000" placeholder="For example: Open the homepage and verify its main heading is visible." required></textarea>
+              <textarea id="test" maxlength="3000" placeholder="Describe the action and the result you expect to see." required></textarea>
               <span class="help">Use a clear, non-destructive instruction. Provide test credentials only through configured environment placeholders.</span>
             </div>
           </div>
           <div class="actions">
             <button class="primary" id="run" type="submit">Run browser test</button>
-            <button class="example" id="example" type="button">Fill a safe example</button>
             <span class="help">One run at a time · Longer tests can take several minutes</span>
           </div>
         </form>
@@ -158,7 +151,6 @@
     </div>
     <script>
       const form = document.querySelector('#run-form');
-      const token = document.querySelector('#token');
       const url = document.querySelector('#url');
       const test = document.querySelector('#test');
       const button = document.querySelector('#run');
@@ -176,6 +168,14 @@
         result.append(heading, detail);
       }
 
+      function responseError(payload, fallback) {
+        if (typeof payload?.detail === 'string') return payload.detail;
+        if (Array.isArray(payload?.detail)) {
+          return payload.detail.map(item => item.msg).filter(Boolean).join(' ');
+        }
+        return fallback;
+      }
+
       function showSummary(summary) {
         result.replaceChildren();
         const heading = document.createElement('p');
@@ -191,7 +191,14 @@
         const meta = document.createElement('p');
         meta.className = 'help';
         meta.textContent = `${summary.step_count || 0} browser actions · ${Math.round((summary.duration_ms || 0) / 1000)} seconds`;
-        result.append(heading, detail, meta);
+        result.append(heading, detail);
+        if (summary.goal) {
+          const goal = document.createElement('p');
+          goal.className = 'result-body';
+          goal.textContent = `Requested test: ${summary.goal}`;
+          result.append(goal);
+        }
+        result.append(meta);
         const verificationDetails = Array.isArray(summary.verification_details)
           ? summary.verification_details
           : [];
@@ -230,34 +237,25 @@
         }
       }
 
-      document.querySelector('#example').addEventListener('click', () => {
-        url.value = 'https://example.com';
-        test.value = 'Open the homepage and verify its main heading is visible.';
-        test.focus();
-      });
-
       form.addEventListener('submit', async event => {
         event.preventDefault();
-        const access = token.value.trim();
         button.disabled = true;
         showMessage('Starting browser test', 'Submitting the website and instruction…');
         try {
           const started = await fetch('/api/runs', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + access },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: url.value.trim(), test_case: test.value.trim() })
           });
           const initial = await started.json();
-          if (!started.ok) throw new Error(initial.detail || 'Could not start the run.');
+          if (!started.ok) throw new Error(responseError(initial, 'Could not start the run.'));
           showMessage('Test queued', 'The browser runner will begin shortly.');
           const deadline = Date.now() + 11 * 60 * 1000;
           while (Date.now() < deadline) {
             await wait(2200);
-            const response = await fetch('/api/runs/' + initial.id, {
-              headers: { 'Authorization': 'Bearer ' + access }
-            });
+            const response = await fetch('/api/runs/' + initial.id);
             const state = await response.json();
-            if (!response.ok) throw new Error(state.detail || 'Could not read the run status.');
+            if (!response.ok) throw new Error(responseError(state, 'Could not read the run status.'));
             if (state.status === 'completed') {
               showSummary(state.summary || {});
               return;

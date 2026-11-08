@@ -37,17 +37,16 @@ def test_only_explicit_url_is_accepted() -> None:
     assert spec.start_url == "https://example.test/login"
 
 
-def test_missing_expectation_gets_one_implicit_verification() -> None:
-    spec = extract_spec(
-        FakeLLM(
-            json_responses=[
-                response(verifications=[], goal="Open the account page", steps=["Open account"])
-            ]
-        ),
-        "Open the account page",
-    )
-    assert len(spec.verifications) == 1
-    assert spec.verifications[0].implicit is True
+def test_missing_expectation_is_not_replaced_with_a_generic_check() -> None:
+    with pytest.raises(SpecExtractionError, match="Add the expected page behavior"):
+        extract_spec(
+            FakeLLM(
+                json_responses=[
+                    response(verifications=[], goal="Open the account page", steps=["Open account"])
+                ]
+            ),
+            "Open the account page",
+        )
 
 
 def test_malformed_model_output_becomes_safe_error() -> None:

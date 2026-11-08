@@ -65,24 +65,22 @@ def extract_spec(client: LLMClient, test_case: str) -> TestSpec:
             raw["start_url"] = None
         verifications = raw.get("verifications")
         if not isinstance(verifications, list) or not verifications:
-            raw["verifications"] = [
-                {
-                    "id": "v1",
-                    "statement": "The described browser flow completes successfully",
-                    "implicit": True,
-                }
-            ]
-        else:
-            implicit_count = sum(
-                1
-                for item in verifications
-                if isinstance(item, dict) and item.get("implicit") is True
+            raise SpecExtractionError(
+                "The model did not identify a result to check. Add the expected page behavior "
+                "or visible outcome to your test sentence."
             )
-            if implicit_count not in {0, 1} or (implicit_count == 1 and len(verifications) != 1):
-                raise ValueError("implicit verification must be the only verification")
+        implicit_count = sum(
+            1
+            for item in verifications
+            if isinstance(item, dict) and item.get("implicit") is True
+        )
+        if implicit_count not in {0, 1} or (implicit_count == 1 and len(verifications) != 1):
+            raise ValueError("implicit verification must be the only verification")
         return TestSpec.model_validate(raw)
     except LLMError as exc:
         raise SpecExtractionError(str(exc)) from exc
+    except SpecExtractionError:
+        raise
     except Exception as exc:
         raise SpecExtractionError(
             f"The model returned an invalid test specification ({type(exc).__name__})."

@@ -1,26 +1,25 @@
-"""Small authenticated web front end for the nlqa command-line runner."""
+"""Small public web front end for the nlqa command-line runner."""
 
 from __future__ import annotations
 
-import ipaddress
 import os
 import re
-import secrets
 import shutil
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, field_validator
 
+from nlqa.network_safety import validate_public_http_url
 from nlqa.startup_errors import startup_failure_reason
 from nlqa.web_summary import verification_details
 
@@ -29,6 +28,8 @@ _lock = threading.Lock()
 _jobs: dict[str, dict[str, Any]] = {}
 _executor = ThreadPoolExecutor(max_workers=1)
 _JOB_ID = re.compile(r"^[a-f0-9]{32}$")
+_run_times_by_client: dict[str, list[float]] = {}
+_RATE_WINDOW_SECONDS = 60 * 60
 
 
 class RunRequest(BaseModel):
@@ -48,34 +49,7 @@ class RunRequest(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_public_http_url(cls, value: str) -> str:
-        value = value.strip()
-        parsed = urlparse(value)
-        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-            raise ValueError("Use a full http:// or https:// URL.")
-        if parsed.username or parsed.password:
-            raise ValueError("Do not put credentials in the URL.")
-        hostname = parsed.hostname.rstrip(".").casefold()
-        if hostname == "localhost" or hostname.endswith((".localhost", ".local")):
-            raise ValueError("The hosted runner accepts public website URLs only.")
-        try:
-            address = ipaddress.ip_address(hostname)
-        except ValueError:
-            pass
-        else:
-            if not address.is_global:
-                raise ValueError("The hosted runner accepts public website URLs only.")
-        return value
-
-
-def _require_access_token(authorization: str | None) -> None:
-    configured = os.environ.get("APP_ACCESS_TOKEN", "").strip()
-    if not configured:
-        raise HTTPException(status_code=503, detail="The hosted runner is not configured yet.")
-    scheme, _, supplied = (authorization or "").partition(" ")
-    if scheme.casefold() != "bearer" or not secrets.compare_digest(supplied, configured):
-        raise HTTPException(
-            status_code=401, detail="Enter the access code configured by the owner."
-        )
+        return validate_public_http_url(value)
 
 
 def _positive_setting(name: str, default: int, maximum: int) -> int:
@@ -108,6 +82,7 @@ def _run_job(job_id: str, test_case: str, url: str) -> None:
         run_root.mkdir(parents=True, exist_ok=True)
         env = os.environ.copy()
         env["NLQA_REPORT_DIR"] = str(run_root)
+        env["NLQA_PUBLIC_ONLY"] = "true"
         command = [
             sys.executable,
             "-m",
@@ -208,12 +183,22 @@ def health() -> dict[str, str]:
 
 
 @app.post("/api/runs", status_code=202)
-def create_run(
-    request: RunRequest, authorization: str | None = Header(default=None)
-) -> dict[str, str]:
-    """Queue a bounded test run after checking the owner access code."""
-    _require_access_token(authorization)
+def create_run(payload: RunRequest, request: Request) -> dict[str, str]:
+    """Queue a bounded test run for this client's supplied URL and instruction."""
+    client_key = request.client.host if request.client else "unknown"
+    now = time.monotonic()
     with _lock:
+        recent = [
+            timestamp
+            for timestamp in _run_times_by_client.get(client_key, [])
+            if now - timestamp < _RATE_WINDOW_SECONDS
+        ]
+        if len(recent) >= _positive_setting("WEB_MAX_RUNS_PER_HOUR", 10, 100):
+            _run_times_by_client[client_key] = recent
+            raise HTTPException(
+                status_code=429,
+                detail="This browser has reached the run limit. Try again in about an hour.",
+            )
         active = sum(job["status"] in {"queued", "running"} for job in _jobs.values())
         if active >= 1:
             raise HTTPException(
@@ -226,17 +211,17 @@ def create_run(
             "created_at": datetime.now(UTC).isoformat(),
             "summary": None,
         }
+        _run_times_by_client[client_key] = [*recent, now]
         for old_id in list(_jobs)[:-20]:
             if _jobs[old_id]["status"] == "completed":
                 del _jobs[old_id]
-        _executor.submit(_run_job, job_id, request.test_case, request.url)
+        _executor.submit(_run_job, job_id, payload.test_case, payload.url)
     return {"id": job_id, "status": "queued"}
 
 
 @app.get("/api/runs/{job_id}")
-def get_run(job_id: str, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+def get_run(job_id: str) -> dict[str, Any]:
     """Return the status and a scrubbed summary for a known run."""
-    _require_access_token(authorization)
     if not _JOB_ID.fullmatch(job_id):
         raise HTTPException(status_code=404, detail="Run not found.")
     with _lock:

@@ -15,8 +15,6 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
-      - key: APP_ACCESS_TOKEN
-        sync: false
       - key: NLQA_HEADLESS
         value: "true"
       - key: NLQA_MAX_ELEMENTS
@@ -27,3 +25,5 @@ services:
         value: "600"
       - key: WEB_MAX_STEPS
         value: "24"
+      - key: WEB_MAX_RUNS_PER_HOUR
+        value: "10"

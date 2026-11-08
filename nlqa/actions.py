@@ -13,6 +13,7 @@ from playwright.sync_api import Frame, Locator, Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from nlqa.models import ToolCall
+from nlqa.network_safety import validate_public_http_url
 from nlqa.observe import Observation, observe
 from nlqa.secrets import SecretStore
 
@@ -45,6 +46,7 @@ class BrowserController:
         report_dir: str | Path = "reports",
         secret_store: SecretStore | None = None,
         allow_domains: list[str] | None = None,
+        public_only: bool = False,
         timeout_ms: int = 7000,
     ) -> None:
         self.page = page
@@ -52,6 +54,7 @@ class BrowserController:
         self.report_dir = Path(report_dir)
         self.secret_store = secret_store or SecretStore({})
         self.allow_domains = [domain.lower().lstrip(".") for domain in (allow_domains or [])]
+        self.public_only = public_only
         self.timeout_ms = timeout_ms
         self.dialog_messages: list[str] = []
         self._new_pages: list[Page] = []
@@ -235,6 +238,11 @@ class BrowserController:
             return None
 
     def _validate_navigation(self, url: str) -> None:
+        if self.public_only:
+            try:
+                validate_public_http_url(url)
+            except ValueError as exc:
+                raise ToolExecutionError(str(exc)) from exc
         parsed = urlparse(url)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise ToolExecutionError("Only absolute http:// and https:// navigation is allowed.")

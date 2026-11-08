@@ -73,7 +73,7 @@ For other adapters, use `LLM_PROVIDER=anthropic`, or `LLM_PROVIDER=openai_compat
 
 ## Optional web interface
 
-The same generic runner can be used through a small authenticated web page. It accepts a public website URL and a plain-English test case, then shows the browser-evidence result. The model API key remains on the server. The page permits one run at a time; it does not save run history, reports, or screenshots.
+The same generic runner can be used through a public web page. It accepts the URL and plain-English test you enter, then shows the model's extracted goal, each requested check, and the evidence collected by Playwright. No website or sentence is preselected. The model API key remains on the server. The page permits one run at a time and limits each client to 10 runs per hour; it does not save run history, reports, or screenshots.
 
 After installing the project, add the web dependencies and set the environment for the shell where the app will run:
 
@@ -84,17 +84,16 @@ $env:LLM_PROVIDER = "openai_compatible"
 $env:LLM_BASE_URL = "https://api.groq.com/openai/v1"
 $env:LLM_MODEL = "<model-id-available-to-your-account>"
 $env:OPENAI_API_KEY = "<your-provider-api-key>"
-$env:APP_ACCESS_TOKEN = "<a-long-private-access-code>"
 python -m uvicorn nlqa.web:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000`. Enter the same private access code set in `APP_ACCESS_TOKEN`; it protects the run API and is never sent to the model. Do not commit or paste API keys or access codes into the repository.
+Open `http://127.0.0.1:8000`. The hosted page has no access-code prompt. Keep provider API keys in the server environment and never commit them to the repository.
 
 ### Deploy the web interface to Render
 
-The repository includes `Dockerfile` and `render.yaml` for a free-tier Render web service. In Render, create a new Blueprint from this repository and provide the prompted values for `LLM_MODEL`, `OPENAI_API_KEY`, and `APP_ACCESS_TOKEN`. Use a model ID available to the configured provider, a Groq API key (or another compatible provider key), and a strong private access code. Keep these values in Render's environment settings; do not add them to GitHub. Render builds the container, installs Chromium, and gives the service a public `onrender.com` address when deployment succeeds.
+The repository includes `Dockerfile` and `render.yaml` for a free-tier Render web service. In Render, create a new Blueprint from this repository and provide `LLM_MODEL` and `OPENAI_API_KEY`. Use a model ID available to the configured provider and a Groq API key (or another compatible provider key). Keep the key in Render's environment settings; do not add it to GitHub. Render builds the container, installs Chromium, and gives the service a public `onrender.com` address when deployment succeeds.
 
-The hosted runner rejects localhost and private literal IP addresses as test targets, limits each run's time and steps, and accepts one concurrent run. It is intended for controlled demonstrations; test only sites and accounts you are authorized to use. A host restart clears in-memory run status, and report artifacts are removed after each run.
+The public hosted runner accepts public HTTP/HTTPS sites and blocks destinations that resolve to local or private network addresses. It limits runs per client, each run's time and steps, and accepts one concurrent run. Anyone with the site link can use the hosted model quota, so the per-client limit is important; test only sites and accounts you are authorized to use. A host restart clears in-memory run status, and report artifacts are removed after each run.
 
 ## Check setup
 
