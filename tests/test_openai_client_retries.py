@@ -147,6 +147,16 @@ def test_groq_tool_calls_hide_reasoning() -> None:
     assert "reasoning_format" not in parameters
 
 
+def test_groq_gpt_oss_uses_its_supported_reasoning_option() -> None:
+    client = OpenAIClient(
+        api_key="test",
+        model="openai/gpt-oss-120b",
+        base_url="https://api.groq.com/openai/v1",
+    )
+
+    assert client._reasoning_kwargs() == {"extra_body": {"include_reasoning": False}}
+
+
 def test_openai_requests_do_not_receive_groq_reasoning_options() -> None:
     client = OpenAIClient(api_key="test", model="test-model")
 

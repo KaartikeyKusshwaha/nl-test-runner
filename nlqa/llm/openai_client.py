@@ -106,8 +106,10 @@ class OpenAIClient:
         self.usage = Usage()
 
     def _reasoning_kwargs(self) -> dict[str, Any]:
-        """Hide GPT-OSS reasoning using the SDK's supported arbitrary-body option."""
+        """Use the reasoning control supported by the configured Groq model family."""
         if self.base_url and "groq.com" in self.base_url.casefold():
+            if self.model.casefold().startswith("openai/gpt-oss-"):
+                return {"extra_body": {"include_reasoning": False}}
             return {"extra_body": {"reasoning_format": "hidden"}}
         return {}
 
