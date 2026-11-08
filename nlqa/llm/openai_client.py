@@ -106,23 +106,28 @@ class OpenAIClient:
             raise LLMError(f"The provider ping failed ({type(exc).__name__}).") from exc
 
     def complete_json(self, *, system: str, user: str, schema: dict[str, Any]) -> dict[str, Any]:
-        tool = {
-            "name": "return_json",
-            "description": "Return the requested structured JSON object.",
-            "parameters": schema,
-        }
+        schema_text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
         response = self._request(
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-            tools=[openai_tool(tool)],
-            tool_choice={"type": "function", "function": {"name": "return_json"}},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        f"{system}\n\nReturn one JSON object only. "
+                        "It must match the supplied schema."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"{user}\n\nJSON SCHEMA:\n{schema_text}",
+                },
+            ],
+            response_format={"type": "json_object"},
             temperature=0,
             max_completion_tokens=self.max_tokens,
         )
         message = response.choices[0].message
-        if not message.tool_calls:
-            raise LLMError("The model did not return the required JSON tool call.")
         try:
-            parsed = json.loads(message.tool_calls[0].function.arguments)
+            parsed = json.loads(message.content)
         except (ValueError, TypeError) as exc:
             raise LLMError("The model returned invalid JSON.") from exc
         if not isinstance(parsed, dict):
