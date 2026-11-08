@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import re
 
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
 
 def startup_failure_reason(stdout: str, stderr: str, returncode: int) -> str:
     """Map safe CLI startup failures to useful UI text without exposing raw output."""
-    output = f"{stdout}\n{stderr}"
+    output = _ANSI_ESCAPE.sub("", f"{stdout}\n{stderr}")
     match = re.search(r"RESULT:\s*ERROR\s+([^\r\n]+)", output)
     detail = " ".join(match.group(1).split()) if match else ""
 
@@ -30,6 +32,11 @@ def startup_failure_reason(stdout: str, stderr: str, returncode: int) -> str:
         )
     if "HTTP 400" in detail or "HTTP 404" in detail:
         return "The AI provider rejected the model request. Check LLM_MODEL and provider settings."
+    if "invalid json" in detail.casefold():
+        return (
+            "The AI returned a malformed test plan, so no browser steps ran. "
+            "Retry the instruction; if it repeats, check the selected model's JSON support."
+        )
     if "did not return a usable tool call" in detail:
         return (
             "The AI could not turn this instruction into a test plan. "

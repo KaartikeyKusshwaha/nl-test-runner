@@ -13,6 +13,28 @@ def test_startup_error_identifies_invalid_provider_key_without_raw_output() -> N
     assert "Authorization header" not in reason
 
 
+def test_startup_error_parses_rich_colored_output() -> None:
+    reason = startup_failure_reason(
+        "\x1b[1;31mRESULT: ERROR\x1b[0m The model rejected the request (HTTP 401). "
+        "Check provider configuration.",
+        "",
+        2,
+    )
+
+    assert "provider rejected the API key" in reason
+
+
+def test_startup_error_explains_invalid_json_without_exposing_model_output() -> None:
+    reason = startup_failure_reason(
+        "RESULT: ERROR The model returned invalid JSON.",
+        "private response text",
+        2,
+    )
+
+    assert "malformed test plan" in reason
+    assert "private response text" not in reason
+
+
 def test_startup_error_identifies_invalid_model_configuration() -> None:
     reason = startup_failure_reason(
         "RESULT: ERROR The model rejected the request (HTTP 404). Check provider configuration.",
